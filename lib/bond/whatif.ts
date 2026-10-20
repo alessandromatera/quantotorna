@@ -232,12 +232,16 @@ export function simulaUscita(par: ParametriUscita): EsitoUscita | null {
   const prezzoScarico =
     prezzoUscita - (prezzoTeorico(bond, dataUscita) - prezzoTeorico(bond, dataCarico));
 
-  const commissioniVendita = par.tariffa
-    ? commissione({
-        tariffa: par.tariffa,
-        controvalore: controvaloreCents(bond.quantita, prezzoUscita),
-      })
-    : (par.commissioniVendita ?? 0);
+  // Il rimborso non è una compravendita sul MOT: niente commissione, come
+  // nel conto di `simulaAcquisto`.
+  const commissioniVendita = aScadenza
+    ? 0
+    : par.tariffa
+      ? commissione({
+          tariffa: par.tariffa,
+          controvalore: controvaloreCents(bond.quantita, prezzoUscita),
+        })
+      : (par.commissioniVendita ?? 0);
 
   const vendita = calcolaVendita({
     lotti: [lottoSimulato(bond)],

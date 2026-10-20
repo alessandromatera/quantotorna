@@ -2,7 +2,9 @@
 
 import { GLOSSARIO } from "@/lib/glossario";
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useId,
   useLayoutEffect,
@@ -19,6 +21,18 @@ import { createPortal } from "react-dom";
  * `fixed`: così non viene mai ritagliato dai contenitori con overflow (le
  * tabelle), che prima lo mostravano come un "popup bianco" tagliato.
  */
+
+/**
+ * Dentro l'intestazione di una colonna ordinabile il clic col mouse ordina:
+ * la spiegazione l'ha già aperta il passaggio del mouse. Col dito, che non
+ * passa sopra, il tocco sulla parola resta suo e apre la spiegazione.
+ */
+const InIntestazioneOrdinabile = createContext(false);
+
+export function IntestazioneOrdinabile({ children }: { children: React.ReactNode }) {
+  return <InIntestazioneOrdinabile.Provider value>{children}</InIntestazioneOrdinabile.Provider>;
+}
+
 export function Termine({
   chiave,
   children,
@@ -34,6 +48,8 @@ export function Termine({
   const trigger = useRef<HTMLButtonElement>(null);
   const riquadro = useRef<HTMLDivElement>(null);
   const id = useId();
+  const inIntestazione = useContext(InIntestazioneOrdinabile);
+  const puntatore = useRef("");
 
   // Calcola la posizione fixed a partire dal rettangolo del trigger,
   // scegliendo sopra/sotto e restando dentro il viewport.
@@ -103,7 +119,12 @@ export function Termine({
         }}
         onFocus={() => setAperto(true)}
         onBlur={() => setAperto(false)}
+        onPointerDown={(e) => {
+          puntatore.current = e.pointerType;
+        }}
         onClick={(e) => {
+          // Da tastiera `detail` è 0: Invio apre la spiegazione anche qui.
+          if (inIntestazione && puntatore.current === "mouse" && e.detail > 0) return;
           e.stopPropagation();
           setAperto((v) => !v);
         }}

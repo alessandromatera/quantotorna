@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { metricheCatalogo, parametriTitolo, type TitoloValutato } from "../catalogo/metriche";
 import { TARIFFA_NULLA } from "../costi/commissioni";
 import { simulaAcquisto } from "./acquisto";
+import { simulaUscita } from "./whatif";
 
 /** Un BTP inventato. */
 const btp: TitoloValutato = {
@@ -64,6 +65,28 @@ describe("simulaAcquisto", () => {
     expect(con.addebito - senza.addebito).toBe(1_862);
     expect(con.ytmNettoPct!).toBeLessThan(senza.ytmNettoPct!);
     expect(con.ytmLordoPct).toBe(senza.ytmLordoPct);
+  });
+
+  it("tenuto fino al rimborso dà lo stesso conto di «Se esco prima» a scadenza", () => {
+    const tariffa = { percentuale: 0.19, minimo: 295, massimo: 1_900, fisso: 0 };
+    const bond = parametriTitolo(btp, OGGI);
+    const senza = simulaAcquisto(bond, TARIFFA_NULLA)!;
+    const con = simulaAcquisto(bond, tariffa)!;
+    // Le commissioni d'acquisto fanno parte del costo fiscale.
+    expect(con.rimborso.plusvalenza).toBe(senza.rimborso.plusvalenza - 1_862);
+    expect(con.rimborso.impostaPlusvalenza).toBeLessThan(senza.rimborso.impostaPlusvalenza);
+
+    const uscita = simulaUscita({
+      bond: { ...bond, commissioni: con.commissioni },
+      dataUscita: btp.dataScadenza,
+      shockPct: 0,
+      tariffa,
+    })!;
+    // Al rimborso non si paga una commissione di vendita.
+    expect(uscita.commissioniVendita).toBe(0);
+    expect(uscita.plusMinus).toBe(con.rimborso.plusvalenza);
+    expect(uscita.impostaPlusvalenza).toBe(con.rimborso.impostaPlusvalenza);
+    expect(uscita.esborso).toBe(con.costoNetto);
   });
 
   it("su uno step-up le cedole si raggruppano per gradino", () => {

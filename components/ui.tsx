@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { IntestazioneOrdinabile } from "@/components/termine";
 
 /**
  * Primitive dell'interfaccia. Sono l'unico posto in cui vivono spaziature,
@@ -422,10 +423,11 @@ export function Tabella({
   /** La colonna su cui la tabella è ordinata, e in che verso. */
   ordinamento?: { chiave: string; verso: "asc" | "desc" };
   /**
-   * Clic sulla freccia di una colonna ordinabile. La freccia è un bottone a
-   * parte e non l'intera intestazione: la parola dell'intestazione è spesso
-   * un termine del glossario, e un clic lì deve aprire la spiegazione, non
-   * rimescolare la tabella.
+   * Clic sull'intestazione di una colonna ordinabile, o sulla sua freccia,
+   * che è il bottone per la tastiera. Se la parola è un termine del
+   * glossario, col mouse la spiegazione si apre al passaggio e il clic
+   * ordina; col dito il tocco sulla parola apre la spiegazione e il resto
+   * dell'intestazione ordina (vedi `IntestazioneOrdinabile`).
    */
   onOrdina?: (chiave: string) => void;
   children?: ReactNode;
@@ -450,9 +452,12 @@ export function Tabella({
                           : "descending"
                         : undefined
                     }
+                    onClick={ordinabile ? () => onOrdina!(c.chiave) : undefined}
                     className={`border-b border-[var(--bordo)] bg-[var(--superficie-2)] px-3 py-2.5 align-bottom font-semibold first:pl-4 last:pr-4 ${
                       c.numerica ? "text-right" : ""
-                    } ${attiva ? "text-[var(--inchiostro)]" : ""} ${
+                    } ${ordinabile ? "cursor-pointer select-none hover:text-[var(--inchiostro)]" : ""} ${
+                      attiva ? "text-[var(--inchiostro)]" : ""
+                    } ${
                       c.evidenza ? "colonna-evidenza text-[var(--inchiostro)]" : ""
                     }`}
                   >
@@ -460,7 +465,11 @@ export function Tabella({
                       {ordinabile && (
                         <button
                           type="button"
-                          onClick={() => onOrdina!(c.chiave)}
+                          onClick={(e) => {
+                            // Senza, il clic risalirebbe all'intestazione e ordinerebbe due volte.
+                            e.stopPropagation();
+                            onOrdina!(c.chiave);
+                          }}
                           aria-label={`Ordina per ${c.ordina}${
                             attiva ? (ordinamento!.verso === "asc" ? ", ora crescente" : ", ora decrescente") : ""
                           }`}
@@ -471,7 +480,13 @@ export function Tabella({
                           <FrecciaOrdine verso={attiva ? ordinamento!.verso : null} />
                         </button>
                       )}
-                      <span>{c.intestazione}</span>
+                      <span>
+                        {ordinabile ? (
+                          <IntestazioneOrdinabile>{c.intestazione}</IntestazioneOrdinabile>
+                        ) : (
+                          c.intestazione
+                        )}
+                      </span>
                     </span>
                   </th>
                 );

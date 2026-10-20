@@ -987,12 +987,19 @@ export function Mercato({
               {formatNumero(nominale)} € nominali. Un clic sulla riga apre il conto d'acquisto col
               tuo nominale, il tuo prezzo e le tue commissioni, e «Se esco prima»: cosa resta in
               mano vendendo prima della scadenza.{" "}
-              {/* L'ordine si sceglie dalle frecce delle intestazioni; qui lo si
-                  dice a parole, perché sul telefono le intestazioni scorrono
-                  fuori dallo schermo. */}
+              {/* L'ordine si sceglie dalle intestazioni; qui lo si dice a
+                  parole, perché sul telefono le intestazioni scorrono fuori
+                  dallo schermo. */}
               <span className="text-[var(--inchiostro-muto)]">
                 Ordine{perAnno ? " dentro ogni anno" : ""}: {descriviOrdinamento(ordinamento)}; a
                 pari merito {descriviOrdinamento(spareggio(ordinamento.chiave))}.
+                {metriche.nascostiYtmNegativo > 0 && (
+                  <>
+                    {" "}
+                    Non sono in elenco {metriche.nascostiYtmNegativo} titoli che a scadenza
+                    restituiscono meno di quanto costano oggi, imposte comprese.
+                  </>
+                )}
               </span>
             </Introduzione>
 
@@ -1017,36 +1024,38 @@ export function Mercato({
               </div>
             </details>
 
+            {/* Sopra la tabella e chiuso: sotto, con la tabella che scorre nel
+                suo riquadro, restava sempre in fondo allo schermo a togliere
+                righe. */}
+            <details className="group border-b border-[var(--bordo)]">
+              <summary className="flex cursor-pointer items-center gap-2 px-4 py-2.5 text-sm font-medium hover:bg-[var(--superficie-2)]">
+                <Chevron className="ruota-aperto text-[var(--inchiostro-muto)]" />
+                <span>Come si leggono le colonne</span>
+              </summary>
+              <p className="max-w-4xl px-4 pb-4 text-xs leading-relaxed text-[var(--inchiostro-muto)]">
+                YTM netto: imposte al 12,5% effettivo e prezzo di chiusura, commissioni escluse.
+                «Netto a scadenza» è lo stesso rendimento in euro, su 10.000 € spesi oggi invece
+                che sui nominali: premia anche il tempo, quindi fra scadenze diverse dice quanto
+                ci si ritrova, non quanto rende. «Plus a rimborso» <strong>non è un extra da
+                sommare</strong> allo YTM netto: ci è già dentro. È il differenziale certo fra
+                prezzo e rimborso — misurato dal prezzo teorico, perché il disaggio di emissione
+                è tassato a parte — e serve a decidere sullo zainetto. Positivo comprando sotto
+                la pari: plusvalenza che assorbe lo zainetto sui titoli con cedola e sui BOT coi
+                dati d'asta, mentre sugli <Termine chiave="btpStrip">strip</Termine> è tutto
+                scarto di emissione e ne resta fuori (segnalato riga per riga). Negativo sopra la
+                pari: una minusvalenza certa che lo zainetto lo alimenta. Il{" "}
+                <Termine chiave="rating">rating</Termine> è dell'emittente e non del singolo
+                titolo, rilevato a mano ({RATING_FONTE}; il più vecchio il{" "}
+                <strong>{formatDataIT(RATING_RILEVATI)}</strong>): un declassamento non si
+                aggiorna da solo.
+              </p>
+            </details>
+
             <Tabella
               colonne={colonneFlussi}
               ordinamento={ordinamento}
               onOrdina={(chiave) => setOrdinamento((o) => cambiaOrdinamento(o, chiave as ChiaveOrdinamento))}
               vuoto={titoli.length === 0 ? "Nessun titolo con questi filtri." : undefined}
-              nota={
-                <>
-                  {metriche.nascostiYtmNegativo > 0 && (
-                    <>
-                      Non sono in elenco {metriche.nascostiYtmNegativo} titoli che a scadenza
-                      restituiscono meno di quanto costano oggi, imposte comprese.{" "}
-                    </>
-                  )}
-                  YTM netto: imposte al 12,5% effettivo e prezzo di chiusura, commissioni escluse.
-                  «Netto a scadenza» è lo stesso rendimento in euro, su 10.000 € spesi oggi invece
-                  che sui nominali: premia anche il tempo, quindi fra scadenze diverse dice quanto
-                  ci si ritrova, non quanto rende. «Plus a rimborso» <strong>non è un extra da
-                  sommare</strong> allo YTM netto: ci è già dentro. È il differenziale certo fra
-                  prezzo e rimborso — misurato dal prezzo teorico, perché il disaggio di emissione
-                  è tassato a parte — e serve a decidere sullo zainetto. Positivo comprando sotto
-                  la pari: plusvalenza che assorbe lo zainetto sui titoli con cedola e sui BOT coi
-                  dati d'asta, mentre sugli <Termine chiave="btpStrip">strip</Termine> è tutto
-                  scarto di emissione e ne resta fuori (segnalato riga per riga). Negativo sopra la
-                  pari: una minusvalenza certa che lo zainetto lo alimenta. Il{" "}
-                  <Termine chiave="rating">rating</Termine> è dell'emittente e non del singolo
-                  titolo, rilevato a mano ({RATING_FONTE}; il più vecchio il{" "}
-                  <strong>{formatDataIT(RATING_RILEVATI)}</strong>): un declassamento non si
-                  aggiorna da solo.
-                </>
-              }
             >
               {gruppi.map((g) => (
                 <Fragment key={g.anno ?? "tutti"}>

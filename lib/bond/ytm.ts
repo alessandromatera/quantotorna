@@ -221,8 +221,18 @@ export function capitalGainRimborso(p: ParametriBond): CapitalGainRimborso {
   const plusvalenza =
     controvaloreCents(p.quantita, teorico) -
     controvaloreCents(p.quantita, p.prezzoCarico) -
-    (p.commissioniCarico ?? 0);
+    commissioniNelCosto(p);
   return { plusvalenza, imposta: impostaRimborso(p, plusvalenza) };
+}
+
+/**
+ * Centesimi: le commissioni che fanno parte del costo fiscale (art. 68
+ * TUIR: il costo è aumentato degli oneri inerenti). Su un acquisto il carico
+ * è quello di oggi, e le sue commissioni ci entrano come quelle di un carico
+ * di allora: lo stesso costo che `simulaUscita` dà al lotto.
+ */
+function commissioniNelCosto(p: ParametriBond): Centesimi {
+  return p.commissioniCarico ?? (p.acquisto ? (p.commissioni ?? 0) : 0);
 }
 
 /**

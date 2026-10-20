@@ -62,6 +62,14 @@ const PRESET: { nome: string; shock: number; titolo: string }[] = [
 const SHOCK_GRIGLIA = [-2, -1, 0, 1, 2];
 const ORIZZONTI_GRIGLIA = [1, 3, 5, 10];
 
+/**
+ * L'uscita fra `anni` cade prima del rimborso. Dopo, «uscire» vuol dire
+ * essere rimborsati: ogni orizzonte darebbe lo stesso conto di «A scadenza».
+ */
+function primaDellaScadenza(bond: ParametriBond, anni: number): boolean {
+  return aggiungiMesi(bond.dataRiferimento, anni * 12) < bond.dataScadenza;
+}
+
 export interface ContestoFiscale {
   zainetto: VoceZainetto[];
   compensazioneTitoliStatoRidotta: boolean;
@@ -81,7 +89,11 @@ export function CalcolatoreUscita({
   /** Tariffa scelta da chi guarda: le commissioni seguono ogni scenario. */
   tariffa?: TariffaMercato;
 }) {
-  const [orizzonte, setOrizzonte] = useState("3");
+  const orizzonti = ORIZZONTI.filter((o) => o.anni == null || primaDellaScadenza(bond, o.anni));
+  const [scelto, setOrizzonte] = useState("3");
+  // Se i 3 anni vanno oltre la scadenza si parte dal più lungo che resta.
+  const piuLungo = orizzonti.filter((o) => o.anni != null).pop()?.valore ?? "scadenza";
+  const orizzonte = orizzonti.some((o) => o.valore === scelto) ? scelto : piuLungo;
   const [shock, setShock] = useState(0);
 
   const base = useMemo(
@@ -114,7 +126,12 @@ export function CalcolatoreUscita({
     [base, dataUscita],
   );
   const griglia = useMemo(
-    () => grigliaScenari(base, ORIZZONTI_GRIGLIA, SHOCK_GRIGLIA),
+    () =>
+      grigliaScenari(
+        base,
+        ORIZZONTI_GRIGLIA.filter((anni) => primaDellaScadenza(base.bond, anni)),
+        SHOCK_GRIGLIA,
+      ),
     [base],
   );
 
@@ -133,7 +150,7 @@ export function CalcolatoreUscita({
           Esco fra
         </span>
         <Segmentato
-          voci={ORIZZONTI.map((o) => ({ valore: o.valore, nome: o.nome }))}
+          voci={orizzonti.map((o) => ({ valore: o.valore, nome: o.nome }))}
           valore={orizzonte}
           onCambia={setOrizzonte}
           etichetta="Orizzonte di uscita"
@@ -186,7 +203,7 @@ export function CalcolatoreUscita({
 
       <Scomposizione esito={esito} bond={bond} />
 
-      <GrigliaScenari griglia={griglia} />
+      {griglia.length > 0 && <GrigliaScenari griglia={griglia} />}
 
       <p className="text-xs text-[var(--inchiostro-muto)]">
         Il prezzo di uscita è ricalcolato scontando i flussi che restano a
@@ -198,7 +215,7 @@ export function CalcolatoreUscita({
         principale per cui «a scadenza» qui rende meno dello YTM netto in
         tabella, che invece le dà per reinvestite al tasso dello YTM stesso.
         Commissioni di acquisto e vendita sono quelle della tariffa scelta in
-        «Le tue condizioni».
+        «Le tue condizioni»; al rimborso non se ne pagano.
       </p>
     </div>
   );

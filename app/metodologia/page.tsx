@@ -109,8 +109,10 @@ export default function Metodologia() {
             </li>
             <li>
               Nella tabella: 10.000 nominali, prezzo di chiusura, nessuna commissione. Nominale,
-              prezzo e tariffa li scegli tu nella simulazione sotto ogni titolo. I titoli che a
-              scadenza restituiscono meno di quanto costano, imposte comprese, non sono in elenco.
+              prezzo e tariffa li scegli tu nella simulazione sotto ogni titolo. Lì le commissioni
+              d'acquisto entrano nel costo fiscale e riducono la plusvalenza; al rimborso non se
+              ne pagano altre. I titoli che a scadenza restituiscono meno di quanto costano,
+              imposte comprese, non sono in elenco.
             </li>
           </Elenco>
         </Sezione>
