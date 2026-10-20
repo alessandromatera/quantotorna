@@ -95,18 +95,28 @@ export interface EsitoUscita {
   prezzoUscita: number;
   /** Variazione percentuale del prezzo clean rispetto a oggi. */
   variazionePrezzoPct: number;
-  /** Centesimi: esborso di regolamento dell'acquisto. */
+  /**
+   * Centesimi: esborso di regolamento dell'acquisto, il «costo netto» di «Se
+   * lo compro»: rateo pagato al netto dello storno, commissioni, crediti e
+   * addebiti sul disaggio.
+   */
   esborso: Centesimi;
-  /** Centesimi: cedole lorde staccate fra oggi e l'uscita. */
-  cedoleLorde: Centesimi;
-  /** Centesimi: imposta su cedole, rateo di vendita e disaggio maturato. */
-  impostaRedditiCapitale: Centesimi;
+  /** Centesimi: nominale al prezzo di uscita, clean (al rimborso, a 100). */
+  controvaloreUscita: Centesimi;
   /** Centesimi: rateo incassato dal compratore alla vendita. */
   rateoVendita: Centesimi;
-  /** Centesimi: corrispettivo clean − commissioni di vendita. */
-  corrispettivo: Centesimi;
   /** Centesimi: commissioni pagate per uscire. */
   commissioniVendita: Centesimi;
+  /** Centesimi: cedole lorde staccate fra oggi e l'uscita. */
+  cedoleLorde: Centesimi;
+  /** Centesimi: imposta sulle cedole e sul rateo di vendita. */
+  impostaCedoleRateo: Centesimi;
+  /**
+   * Centesimi, CON SEGNO: imposta sul disaggio regolata all'uscita (vedi
+   * `impostaDisaggioCessione`). Negativa su un BOT venduto prima del
+   * rimborso: è l'imposta sullo scarto residuo che torna a chi vende.
+   */
+  impostaDisaggio: Centesimi;
   /** Centesimi con segno: plus/minus fiscale realizzata dalla vendita. */
   plusMinus: Centesimi;
   /** Centesimi: imposta sulla plusvalenza, già al netto della compensazione. */
@@ -119,7 +129,12 @@ export interface EsitoUscita {
     annoCompetenza: number;
     dataScadenza: string;
   } | null;
-  /** Centesimi: tutto quello che si ha in mano il giorno dell'uscita. */
+  /**
+   * Centesimi: tutto quello che si ha in mano il giorno dell'uscita. È il
+   * conto delle voci qui sopra: controvalore + rateo − commissioni + cedole
+   * − imposta su cedole e rateo − imposta sul disaggio − imposta sulla
+   * plusvalenza.
+   */
   incassoNetto: Centesimi;
   /** Centesimi con segno: incassoNetto − esborso. */
   guadagnoNetto: Centesimi;
@@ -219,8 +234,9 @@ export function simulaUscita(par: ParametriUscita): EsitoUscita | null {
   // vende si vede restituire l'imposta sullo scarto che resta, e il numero è
   // negativo.
   const impostaDisaggio = impostaDisaggioCessione(bond, dataUscita);
-  const impostaRedditiCapitale =
-    arrotondaCentesimi(Math.max(0, redditiCapitale) * ALIQUOTA_AGEVOLATA) + impostaDisaggio;
+  const impostaCedoleRateo = arrotondaCentesimi(
+    Math.max(0, redditiCapitale) * ALIQUOTA_AGEVOLATA,
+  );
 
   /**
    * Prezzo di scarico AI FINI DEL CAPITAL GAIN: il prezzo di uscita meno il
@@ -251,9 +267,8 @@ export function simulaUscita(par: ParametriUscita): EsitoUscita | null {
     voci: par.zainetto ?? [],
     data: dataUscita,
   });
-  // Il corrispettivo in cassa è al prezzo di uscita vero, non a quello fiscale.
-  const corrispettivo =
-    controvaloreCents(bond.quantita, prezzoUscita) - commissioniVendita;
+  // In cassa entra il prezzo di uscita vero, non quello fiscale.
+  const controvaloreUscita = controvaloreCents(bond.quantita, prezzoUscita);
   const ridotta = par.compensazioneTitoliStatoRidotta ?? false;
   const tassazione = vendita.plusvalenza
     ? ridotta
@@ -268,10 +283,12 @@ export function simulaUscita(par: ParametriUscita): EsitoUscita | null {
 
   const esborso = esborsoNetto(bond);
   const incassoNetto =
-    corrispettivo +
-    rateoVendita +
+    controvaloreUscita +
+    rateoVendita -
+    commissioniVendita +
     cedoleLorde -
-    impostaRedditiCapitale -
+    impostaCedoleRateo -
+    impostaDisaggio -
     (tassazione?.imposta ?? 0);
   const guadagnoNetto = incassoNetto - esborso;
 
@@ -284,11 +301,12 @@ export function simulaUscita(par: ParametriUscita): EsitoUscita | null {
     prezzoUscita: Math.round(prezzoUscita * 1000) / 1000,
     variazionePrezzoPct: Math.round((prezzoUscita / bond.prezzo - 1) * 10000) / 100,
     esborso,
-    cedoleLorde,
-    impostaRedditiCapitale,
+    controvaloreUscita,
     rateoVendita,
-    corrispettivo,
     commissioniVendita,
+    cedoleLorde,
+    impostaCedoleRateo,
+    impostaDisaggio,
     plusMinus: vendita.lifo.plusMinus,
     impostaPlusvalenza: tassazione?.imposta ?? 0,
     minusvalenzeAssorbite: tassazione?.minusvalenzeAssorbite ?? 0,

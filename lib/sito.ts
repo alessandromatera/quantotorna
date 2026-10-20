@@ -4,5 +4,5 @@
  */
 export const AUTORE = "Alessandro Matera";
 
-/** La repo pubblica. Va creata prima della prima pubblicazione del sito (todo.md). */
+/** La repo pubblica. Va creata prima della prima pubblicazione del sito. */
 export const URL_CODICE = "https://github.com/alessandromatera/quantotorna";

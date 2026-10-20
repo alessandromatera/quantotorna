@@ -13,12 +13,12 @@ function btp(p: Partial<CandidatoOrdinabile> & { isin: string }): CandidatoOrdin
   return {
     dataScadenza: "2030-01-01",
     ytmNettoPct: 3,
-    plusRimborso10k: 0,
+    plusRimborso: 0,
     cedolaAnnua: 3,
     prezzo: 100,
     durationModificata: 3,
     scambiMediana: 100_000,
-    netto10kInvestiti: { incassi: 1_100_000 },
+    nettoSuSpesa: { incassi: 1_100_000 },
     ...p,
   };
 }
@@ -89,9 +89,9 @@ describe("ordinaCandidati", () => {
    */
   it("per netto a scadenza: chi restituisce di più prima", () => {
     const titoli = [
-      btp({ isin: "A", netto10kInvestiti: { incassi: 1_080_000 } }),
-      btp({ isin: "B", netto10kInvestiti: { incassi: 1_420_000 } }),
-      btp({ isin: "C", netto10kInvestiti: null }),
+      btp({ isin: "A", nettoSuSpesa: { incassi: 1_080_000 } }),
+      btp({ isin: "B", nettoSuSpesa: { incassi: 1_420_000 } }),
+      btp({ isin: "C", nettoSuSpesa: null }),
     ];
     expect(isin(ordinaCandidati(titoli, { chiave: "netto", verso: "desc" }))).toEqual(["B", "A", "C"]);
   });

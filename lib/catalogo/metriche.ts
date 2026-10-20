@@ -8,11 +8,14 @@ import {
   ytmNetto,
   ytmNettoSenzaCapitalGain,
   type ParametriBond,
+  type RendimentoNetto,
 } from "../bond/ytm";
 import type { CategoriaStrumento } from "../categorie";
+import { commissione, TARIFFA_NULLA, type TariffaMercato } from "../costi/commissioni";
 import { inflazionePareggio } from "../costi/inflazione";
 import { giorniTra } from "../date";
 import type { Centesimi } from "../money";
+import { controvaloreCents } from "../tax/lifo";
 import { soloRendimentiAccettabili } from "../mercato/ammissibili";
 import { completa, type EmissioneSalvata } from "../mercato/emissioni";
 import {
@@ -23,10 +26,12 @@ import type { Catalogo, TitoloCatalogo } from "./formato";
 
 /**
  * Il catalogo con le metriche del motore, come le mostra la tabella: per un
- * acquisto di oggi — il giorno dei prezzi — di 10.000 nominali al prezzo di
- * chiusura, senza commissioni. Nominale, prezzo e commissioni diversi li
- * sceglie chi guarda, e il browser rifà gli stessi conti con le stesse
- * funzioni (lib/bond/acquisto.ts, lib/bond/whatif.ts).
+ * acquisto di oggi — il giorno dei prezzi — al prezzo di chiusura, sul
+ * nominale e con la tariffa delle condizioni (`CondizioniTabella`). La
+ * pagina compilata le ha su 10.000 nominali senza commissioni; chi sceglie
+ * condizioni sue se le vede rifare nel browser, con le stesse funzioni
+ * (`righeConCondizioni`), come le simulazioni sotto ogni riga
+ * (lib/bond/acquisto.ts, lib/bond/whatif.ts).
  *
  * Tre elenchi separati, perché sono tre modelli diversi e mescolarli
  * metterebbe un rendimento nominale, uno reale e un «non calcolabile» nella
@@ -47,11 +52,26 @@ import type { Catalogo, TitoloCatalogo } from "./formato";
  * Modulo puro: gira alla compilazione del sito e nei test.
  */
 
-/** Il nominale su cui la tabella misura plusvalenze e rendimenti in euro. */
+/** Il nominale su cui la pagina compilata misura plusvalenze e rendimenti in euro. */
 export const NOMINALE_RIFERIMENTO = 10_000;
 
-/** Centesimi: i 10.000 euro su cui si misura il «netto a scadenza». */
-export const CAPITALE_RIFERIMENTO = 1_000_000;
+/**
+ * Su cosa si fanno i conti della tabella. Il nominale fa le colonne «su
+ * 10.000 nom.» ed è anche la somma, in euro, del «netto a scadenza»: «ogni
+ * 10.000 € spesi». Lo zainetto non c'è: si consuma una volta sola, e
+ * applicato a ogni riga come se fosse l'unico acquisto gonfierebbe tutti i
+ * rendimenti insieme. Per chi ha minusvalenze c'è lo YTM senza capital gain.
+ */
+export interface CondizioniTabella {
+  nominale: number;
+  tariffa: TariffaMercato;
+}
+
+/** Le condizioni della pagina compilata, uguali per tutti. */
+export const CONDIZIONI_RIFERIMENTO: CondizioniTabella = {
+  nominale: NOMINALE_RIFERIMENTO,
+  tariffa: TARIFFA_NULLA,
+};
 
 /**
  * Distanza massima fra le scadenze per accostare un BTP€i a un titolo a
@@ -94,17 +114,18 @@ export interface RigaFlussiNoti extends TitoloValutato {
   durationModificata: number | null;
   durationModificataNetta: number | null;
   /**
-   * Centesimi, CON SEGNO, su 10.000 nominali: differenziale certo fra prezzo
-   * teorico e prezzo pagato. Sotto la pari è una plusvalenza che assorbe lo
-   * zainetto; sopra la pari una minusvalenza certa che lo alimenta.
+   * Centesimi, CON SEGNO, sul nominale delle condizioni: differenziale certo
+   * fra prezzo teorico e prezzo pagato, commissioni comprese. Sotto la pari
+   * è una plusvalenza che assorbe lo zainetto; sopra la pari una
+   * minusvalenza certa che lo alimenta.
    */
-  plusRimborso10k: Centesimi;
+  plusRimborso: Centesimi;
   /** Centesimi: imposta su quel differenziale, senza zainetto. */
-  imposta10kSenzaZainetto: Centesimi;
-  /** Centesimi guadagnati sui 10.000 nominali: totale, per anno, e su quanti anni. */
-  rendimento10k: { totale: Centesimi; annuo: Centesimi; anni: number } | null;
-  /** Centesimi: quanto si ritrova a scadenza chi spende oggi 10.000 €. */
-  netto10kInvestiti: { incassi: Centesimi; guadagno: Centesimi; guadagnoAnnuo: Centesimi } | null;
+  impostaRimborsoSenzaZainetto: Centesimi;
+  /** Centesimi guadagnati sul nominale delle condizioni: totale, per anno, e su quanti anni. */
+  rendimentoNominale: { totale: Centesimi; annuo: Centesimi; anni: number } | null;
+  /** Centesimi: quanto si ritrova a scadenza chi spende oggi la somma delle condizioni. */
+  nettoSuSpesa: { incassi: Centesimi; guadagno: Centesimi; guadagnoAnnuo: Centesimi } | null;
 }
 
 export interface RigaVariabile extends TitoloValutato {
@@ -221,8 +242,65 @@ export function parametriTitolo(
   return parametriAcquistoCatalogo({ ...t, prezzo }, oggi, datiEmissione(t), quantita);
 }
 
-function rigaFlussiNoti(t: TitoloValutato, oggi: string): RigaFlussiNoti {
-  const parametri = parametriTitolo(t, oggi);
+/**
+ * Le righe della tabella rifatte con le condizioni di chi guarda, nel
+ * browser, sugli stessi titoli che la pagina ha messo in tabella con quelle
+ * di riferimento. Un titolo che con le sue commissioni rende meno di zero
+ * resta, col suo rendimento negativo: è proprio quello che deve vedere. Gli
+ * indicizzati non cambiano: il loro rendimento è lordo e senza commissioni.
+ */
+export function righeConCondizioni(
+  m: Pick<MetricheCatalogo, "data" | "flussiNoti" | "variabili">,
+  euribor: Catalogo["euribor6m"],
+  condizioni: CondizioniTabella,
+): Pick<MetricheCatalogo, "flussiNoti" | "variabili"> {
+  return {
+    flussiNoti: m.flussiNoti.map((t) => rigaFlussiNoti(t, m.data, condizioni)),
+    variabili: m.variabili.map((t) => rigaVariabile(t, m.data, euribor, condizioni)),
+  };
+}
+
+/** L'acquisto di `quantita` nominali con le commissioni della tariffa, come in «Se lo compro». */
+function acquisto(
+  t: TitoloValutato,
+  oggi: string,
+  quantita: number,
+  tariffa: TariffaMercato,
+): ParametriBond {
+  const p = parametriTitolo(t, oggi, quantita);
+  return {
+    ...p,
+    commissioni: commissione({ tariffa, controvalore: controvaloreCents(p.quantita, p.prezzo) }),
+  };
+}
+
+/**
+ * Quanto si ritrova a scadenza chi spende oggi la somma delle condizioni,
+ * rateo, commissioni e crediti d'imposta compresi. Si compra il nominale che
+ * costa quella somma, stimato dall'acquisto dei nominali, e solo quello che
+ * resta si riproporziona: con un minimo, un massimo o una quota fissa per
+ * eseguito le commissioni non crescono con la quantità, e riproporzionare
+ * l'acquisto dei nominali le conterebbe sbagliate (su un titolo a 50, il
+ * doppio della quota fissa).
+ */
+function nettoSuSpesa(
+  t: TitoloValutato,
+  oggi: string,
+  condizioni: CondizioniTabella,
+  suNominale: RendimentoNetto,
+): RigaFlussiNoti["nettoSuSpesa"] {
+  const spesa = condizioni.nominale * 100;
+  const quantita = (condizioni.nominale * spesa) / suNominale.esborso;
+  const r = rendimentoNetto(acquisto(t, oggi, quantita, condizioni.tariffa));
+  return r ? rendimentoSuCapitale(r, spesa) : null;
+}
+
+function rigaFlussiNoti(
+  t: TitoloValutato,
+  oggi: string,
+  condizioni: CondizioniTabella = CONDIZIONI_RIFERIMENTO,
+): RigaFlussiNoti {
+  const parametri = acquisto(t, oggi, condizioni.nominale, condizioni.tariffa);
   const duration = analisiDuration(parametri);
   const rendimento = rendimentoNetto(parametri);
   const scartoAnticipato = isScartoAnticipato(parametri);
@@ -241,16 +319,16 @@ function rigaFlussiNoti(t: TitoloValutato, oggi: string): RigaFlussiNoti {
     durationModificata: duration ? arrotonda2(duration.durationModificata) : null,
     durationModificataNetta:
       duration?.durationModificataNetta != null ? arrotonda2(duration.durationModificataNetta) : null,
-    plusRimborso10k: capitalGain.plusvalenza,
-    imposta10kSenzaZainetto: capitalGain.imposta,
-    rendimento10k: rendimento
+    plusRimborso: capitalGain.plusvalenza,
+    impostaRimborsoSenzaZainetto: capitalGain.imposta,
+    rendimentoNominale: rendimento
       ? {
           totale: rendimento.guadagnoNetto,
           annuo: rendimento.guadagnoNettoAnnuo,
           anni: rendimento.anniResidui,
         }
       : null,
-    netto10kInvestiti: rendimento ? rendimentoSuCapitale(rendimento, CAPITALE_RIFERIMENTO) : null,
+    nettoSuSpesa: rendimento ? nettoSuSpesa(t, oggi, condizioni, rendimento) : null,
   };
 }
 
@@ -267,6 +345,7 @@ function rigaVariabile(
   t: TitoloValutato,
   oggi: string,
   euribor: Catalogo["euribor6m"],
+  condizioni: CondizioniTabella = CONDIZIONI_RIFERIMENTO,
 ): RigaVariabile {
   const cedolaStimata =
     euribor != null && t.spread != null
@@ -278,7 +357,10 @@ function rigaVariabile(
   // ripassarci sposterebbe i conti a T+4.
   const parametri =
     cedolaStimata != null && cedolaStimata > 0
-      ? { ...parametriTitolo(t, oggi), cedolaAnnua: cedolaStimata }
+      ? {
+          ...acquisto(t, oggi, condizioni.nominale, condizioni.tariffa),
+          cedolaAnnua: cedolaStimata,
+        }
       : null;
   return {
     ...t,

@@ -56,7 +56,7 @@ export default function Metodologia() {
           </>
         }
       />
-      <div className="contenitore grid gap-10 pt-8 lg:grid-cols-[13rem_minmax(0,48rem)]">
+      <div className="contenitore grid gap-10 pt-8 lg:grid-cols-[13rem_minmax(0,1fr)]">
         <nav aria-label="In questa pagina" className="hidden lg:block">
           <div className="sticky top-6">
             <p className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--inchiostro-muto)]">
@@ -105,14 +105,17 @@ export default function Metodologia() {
             <li>
               Come ogni YTM, presuppone che le cedole si reinvestano allo stesso tasso. La colonna
               «<strong>Netto a scadenza</strong>» no: somma cedole nette e rimborso netto così come
-              arrivano, su 10.000 € spesi oggi.
+              arrivano, sulla somma spesa oggi.
             </li>
             <li>
-              Nella tabella: 10.000 nominali, prezzo di chiusura, nessuna commissione. Nominale,
-              prezzo e tariffa li scegli tu nella simulazione sotto ogni titolo. Lì le commissioni
-              d'acquisto entrano nel costo fiscale e riducono la plusvalenza; al rimborso non se
-              ne pagano altre. I titoli che a scadenza restituiscono meno di quanto costano,
-              imposte comprese, non sono in elenco.
+              Nella tabella, di partenza: 10.000 nominali (e 10.000 € spesi per il netto a
+              scadenza), prezzo di chiusura, nessuna commissione. Nominale e tariffa li cambi
+              nelle tue condizioni, e la tabella rifà i conti nel tuo browser; il prezzo lo
+              cambi nella simulazione sotto ogni titolo. Le commissioni d'acquisto entrano nel
+              costo fiscale e riducono la plusvalenza; al rimborso non se ne pagano altre. Lo
+              zainetto non entra nella tabella: si consuma una volta sola, non per ogni riga. I
+              titoli che a scadenza restituiscono meno di quanto costano, imposte comprese e
+              senza commissioni, non sono in elenco.
             </li>
           </Elenco>
         </Sezione>
@@ -222,8 +225,9 @@ export default function Metodologia() {
               tieni nel deposito, non dal singolo titolo.
             </li>
             <li>
-              Le <strong>commissioni</strong> nella tabella: dipendono dall'intermediario e dal
-              nominale, e le metti tu nelle simulazioni.
+              Le <strong>commissioni</strong>, finché non scrivi le tue: dipendono
+              dall'intermediario e dal nominale. Quelle che scrivi nelle tue condizioni valgono per
+              la tabella e per le simulazioni.
             </li>
             <li>
               Il <strong>book</strong> di negoziazione: il prezzo è l'ultimo scambio, e su un

@@ -2,13 +2,12 @@
 
 import { RendimentiAcquisto } from "@/components/rendimenti-acquisto";
 import { Termine } from "@/components/termine";
-import { Campo, classeCampo } from "@/components/ui";
+import { Campo, classeCampo, TabellaConto, type RigaConto } from "@/components/ui";
 import { simulaAcquisto, type Simulazione } from "@/lib/bond/acquisto";
 import { parametriTitolo, type TitoloValutato } from "@/lib/catalogo/metriche";
 import type { TariffaMercato } from "@/lib/costi/commissioni";
 import {
   formatDataIT,
-  formatEuro,
   formatNumero,
   formatPct,
   formatPrezzoMot,
@@ -16,7 +15,7 @@ import {
   parseNumeroIT,
   parseQuantitaIT,
 } from "@/lib/client/format";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /**
  * «Se lo compro»: il conto del regolamento e tutti i rendimenti di un
@@ -113,8 +112,8 @@ export function SimulaAcquisto({
             <RendimentiAcquisto s={s} mostraCosto={false} />
             {ytmTabella != null && s.ytmNettoPct != null && s.ytmNettoPct !== ytmTabella && (
               <p className="text-xs text-[var(--inchiostro-muto)]">
-                Nella tabella: {formatPct(ytmTabella)} netto, su 10.000 nominali alla chiusura
-                e senza commissioni.
+                Nella tabella: {formatPct(ytmTabella)} netto, col nominale delle tue condizioni
+                e il prezzo di chiusura.
               </p>
             )}
           </div>
@@ -126,7 +125,7 @@ export function SimulaAcquisto({
 
 /** Il conto del regolamento, riga per riga: quello che si vedrebbe sull'estratto. */
 function Conto({ s }: { s: Simulazione }) {
-  const righe: { voce: ReactNode; importo: number; segno: "" | "+" | "−"; forte?: boolean }[] = [
+  const righe: RigaConto[] = [
     {
       voce: `Controvalore (${formatNumero(s.nominale)} a ${formatPrezzoMot(s.prezzo)})`,
       importo: s.controvalore,
@@ -157,17 +156,5 @@ function Conto({ s }: { s: Simulazione }) {
   if (s.costoNetto !== s.addebito) {
     righe.push({ voce: "Costo netto", importo: s.costoNetto, segno: "", forte: true });
   }
-  return (
-    <table className="cifre-tabellari w-full text-sm">
-      <tbody>
-        {righe.map((r, i) => (
-          <tr key={i} className={r.forte ? "border-t border-[var(--bordo)] font-semibold" : ""}>
-            <td className="py-1 pr-3 align-top">{r.voce}</td>
-            <td className="w-4 py-1 text-right align-top text-[var(--inchiostro-muto)]">{r.segno}</td>
-            <td className="whitespace-nowrap py-1 text-right align-top">{formatEuro(r.importo)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
+  return <TabellaConto righe={righe} />;
 }

@@ -20,8 +20,9 @@ import {
   formatPct,
   formatPctSegno,
   formatPrezzo,
+  formatPrezzoMot,
 } from "@/lib/client/format";
-import { Misura, Segmentato } from "@/components/ui";
+import { Misura, Segmentato, TabellaConto, type RigaConto } from "@/components/ui";
 import { Termine } from "@/components/termine";
 import { useMemo, useState } from "react";
 
@@ -157,47 +158,51 @@ export function CalcolatoreUscita({
         />
       </div>
 
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <label htmlFor="shock-tassi" className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--inchiostro-muto)]">
-            E i tassi nel frattempo
-          </label>
-          <span className="cifre-tabellari text-sm font-semibold">
-            {formatPctSegno(shock, 2)}{" "}
-            <span className="font-normal text-[var(--inchiostro-muto)]">
-              ({formatSegnoBp(shock * 100)})
+      {/* A scadenza si incassa 100 qualunque cosa facciano i tassi: lo
+          slider non sposterebbe niente. */}
+      {anni != null && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <label htmlFor="shock-tassi" className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--inchiostro-muto)]">
+              E i tassi nel frattempo
+            </label>
+            <span className="cifre-tabellari text-sm font-semibold">
+              {formatPctSegno(shock, 2)}{" "}
+              <span className="font-normal text-[var(--inchiostro-muto)]">
+                ({formatSegnoBp(shock * 100)})
+              </span>
             </span>
-          </span>
+          </div>
+          <input
+            id="shock-tassi"
+            type="range"
+            min={-3}
+            max={5}
+            step={0.25}
+            value={shock}
+            onChange={(e) => setShock(Number(e.target.value))}
+            className="w-full accent-[var(--accento-pieno)]"
+          />
+          <div className="flex flex-wrap gap-2">
+            {PRESET.map((p) => (
+              <button
+                key={p.nome}
+                type="button"
+                title={p.titolo}
+                aria-pressed={shock === p.shock}
+                onClick={() => setShock(p.shock)}
+                className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+                  shock === p.shock
+                    ? "border-[var(--accento-pieno)] bg-[var(--accento-pieno)] text-white"
+                    : "border-[var(--bordo)] bg-[var(--superficie)] text-[var(--inchiostro-2)] hover:border-[var(--bordo-forte)]"
+                }`}
+              >
+                {p.nome}
+              </button>
+            ))}
+          </div>
         </div>
-        <input
-          id="shock-tassi"
-          type="range"
-          min={-3}
-          max={5}
-          step={0.25}
-          value={shock}
-          onChange={(e) => setShock(Number(e.target.value))}
-          className="w-full accent-[var(--accento-pieno)]"
-        />
-        <div className="flex flex-wrap gap-2">
-          {PRESET.map((p) => (
-            <button
-              key={p.nome}
-              type="button"
-              title={p.titolo}
-              aria-pressed={shock === p.shock}
-              onClick={() => setShock(p.shock)}
-              className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
-                shock === p.shock
-                  ? "border-[var(--accento-pieno)] bg-[var(--accento-pieno)] text-white"
-                  : "border-[var(--bordo)] bg-[var(--superficie)] text-[var(--inchiostro-2)] hover:border-[var(--bordo-forte)]"
-              }`}
-            >
-              {p.nome}
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
 
       <Pareggio esito={esito} pareggio={pareggio} />
 
@@ -365,38 +370,9 @@ function Scomposizione({
         />
       </div>
 
-      <dl className="cifre-tabellari space-y-1 border-t border-[var(--griglia)] pt-3 text-sm">
-        <Voce etichetta="Cedole incassate (lorde)" valore={formatEuro(esito.cedoleLorde)} />
-        {esito.rateoVendita > 0 && (
-          <Voce etichetta="Rateo incassato alla vendita" valore={formatEuro(esito.rateoVendita)} />
-        )}
-        <Voce
-          etichetta="Imposta su cedole e rateo"
-          valore={`− ${formatEuro(esito.impostaRedditiCapitale)}`}
-        />
-        <Voce
-          etichetta="Plus/minus sul prezzo di acquisto"
-          valore={formatEuroSegno(esito.plusMinus)}
-        />
-        {esito.commissioniVendita > 0 && (
-          <Voce
-            etichetta="Commissioni di vendita"
-            valore={`− ${formatEuro(esito.commissioniVendita)}`}
-          />
-        )}
-        {esito.impostaPlusvalenza > 0 && (
-          <Voce
-            etichetta="Imposta sulla plusvalenza"
-            valore={`− ${formatEuro(esito.impostaPlusvalenza)}`}
-          />
-        )}
-        {esito.minusvalenzeAssorbite > 0 && (
-          <Voce
-            etichetta={<Termine chiave="zainetto">Zainetto consumato</Termine>}
-            valore={formatEuro(esito.minusvalenzeAssorbite)}
-          />
-        )}
-      </dl>
+      <div className="border-t border-[var(--griglia)] pt-3">
+        <ContoUscita esito={esito} quantita={bond.quantita} />
+      </div>
 
       {/* Una perdita su un BTP non è solo una perdita: è capienza fiscale che
           vale finché non scade, e va detto nello stesso posto in cui si vede
@@ -413,13 +389,100 @@ function Scomposizione({
   );
 }
 
-function Voce({ etichetta, valore }: { etichetta: React.ReactNode; valore: string }) {
-  return (
-    <div className="flex justify-between gap-3">
-      <dt className="font-sans text-[var(--inchiostro-2)]">{etichetta}</dt>
-      <dd>{valore}</dd>
-    </div>
+/**
+ * Il conto dell'uscita riga per riga, come quello di «Se lo compro»: le voci
+ * fanno l'incasso netto, e l'incasso meno il costo netto dell'acquisto fa il
+ * guadagno. La plusvalenza non è una riga: è la base della sua imposta, e
+ * contiene già le commissioni.
+ */
+function ContoUscita({ esito, quantita }: { esito: EsitoUscita; quantita: number }) {
+  const righe: RigaConto[] = [
+    {
+      voce: esito.aScadenza
+        ? `Rimborso (${formatNumero(quantita)} a 100)`
+        : `Vendita (${formatNumero(quantita)} a ${formatPrezzoMot(esito.prezzoUscita)})`,
+      importo: esito.controvaloreUscita,
+      segno: "",
+    },
+  ];
+  if (esito.rateoVendita > 0) {
+    righe.push({
+      voce: (
+        <>
+          <Termine chiave="rateo">Rateo</Termine> incassato alla vendita
+        </>
+      ),
+      importo: esito.rateoVendita,
+      segno: "+",
+    });
+  }
+  if (esito.commissioniVendita > 0) {
+    righe.push({ voce: "Commissioni di vendita", importo: esito.commissioniVendita, segno: "−" });
+  }
+  if (esito.cedoleLorde > 0) {
+    righe.push({ voce: "Cedole incassate, lorde", importo: esito.cedoleLorde, segno: "+" });
+  }
+  if (esito.impostaCedoleRateo > 0) {
+    righe.push({
+      voce: esito.rateoVendita > 0 ? "Imposta su cedole e rateo" : "Imposta sulle cedole",
+      importo: esito.impostaCedoleRateo,
+      segno: "−",
+    });
+  }
+  if (esito.impostaDisaggio > 0) {
+    righe.push({
+      voce: "Imposta sul disaggio di emissione",
+      importo: esito.impostaDisaggio,
+      segno: "−",
+      nota: "su tutto quello maturato dall'emissione: la parte di prima dell'acquisto è già scalata dal costo",
+    });
+  }
+  if (esito.impostaDisaggio < 0) {
+    righe.push({
+      voce: "Imposta sullo scarto residuo, restituita",
+      importo: -esito.impostaDisaggio,
+      segno: "+",
+      nota: "la rimborsa chi compra il BOT",
+    });
+  }
+  if (esito.plusMinus > 0) {
+    righe.push({
+      voce: (
+        <>
+          Imposta sulla <Termine chiave="plusvalenza">plusvalenza</Termine>
+        </>
+      ),
+      importo: esito.impostaPlusvalenza,
+      segno: "−",
+      nota: (
+        <>
+          su {formatEuro(esito.plusMinus)} di plusvalenza, commissioni comprese
+          {esito.minusvalenzeAssorbite > 0 && (
+            <>
+              ; {formatEuro(esito.minusvalenzeAssorbite)} compensati dallo{" "}
+              <Termine chiave="zainetto">zainetto</Termine>
+            </>
+          )}
+        </>
+      ),
+    });
+  }
+  righe.push(
+    { voce: "Incasso netto", importo: esito.incassoNetto, segno: "", forte: true },
+    {
+      voce: "Costo netto dell'acquisto",
+      importo: esito.esborso,
+      segno: "−",
+      nota: "rateo e commissioni compresi, crediti d'imposta scalati, come in «Se lo compro»",
+    },
+    {
+      voce: esito.guadagnoNetto < 0 ? "Perdita netta" : "Guadagno netto",
+      importo: Math.abs(esito.guadagnoNetto),
+      segno: "",
+      forte: true,
+    },
   );
+  return <TabellaConto righe={righe} />;
 }
 
 /**

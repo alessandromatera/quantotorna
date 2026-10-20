@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { grigliaScenari, shockDiPareggio, simulaUscita } from "./whatif";
 import type { ParametriBond } from "./ytm";
-import { ytmNetto } from "./ytm";
+import { perAcquisto, ytmNetto } from "./ytm";
 
 /** Un BTP lungo, 2,45% settembre 2050, ai prezzi di mercato di agosto 2026. */
 const LUNGO: ParametriBond = {
@@ -143,6 +143,64 @@ describe("simulaUscita", () => {
     })!;
     expect(piccolo.commissioniVendita).toBeGreaterThanOrEqual(250);
     expect(piccolo.commissioniVendita).toBeLessThan(1200);
+  });
+
+  it("le voci del conto si sommano all'incasso, e l'incasso meno il costo al guadagno", () => {
+    const tariffa = { percentuale: 0.15, minimo: 250, massimo: 1200, fisso: 0 };
+    // Titoli inventati: un BTP emesso sotto la pari, comprato sul secondario,
+    // e un BOT con lo scarto tassato all'asta.
+    const conDisaggio = perAcquisto({
+      ...CORTO,
+      prezzoEmissione: 98.6,
+      dataEmissione: "2024-02-01",
+      commissioni: 1200,
+    });
+    const bot = perAcquisto({
+      categoria: "bot",
+      quantita: 10000,
+      prezzo: 98.9,
+      prezzoCarico: 98.9,
+      cedolaAnnua: 0,
+      frequenzaCedola: 0,
+      dataScadenza: "2027-07-14",
+      dataRiferimento: "2026-08-24",
+      prezzoEmissione: 97.6,
+      dataEmissione: "2026-07-14",
+    });
+    const zainetto = [
+      { annoCompetenza: 2026, importoResiduo: 20_000, dataScadenza: "2030-12-31" },
+    ];
+    const scenari = [
+      { bond: LUNGO, dataUscita: "2029-08-24", shockPct: 0, tariffa },
+      { bond: LUNGO, dataUscita: "2027-08-24", shockPct: 2, tariffa },
+      { bond: conDisaggio, dataUscita: "2028-03-15", shockPct: -1, tariffa, zainetto },
+      { bond: conDisaggio, dataUscita: "2031-02-01", shockPct: 0, tariffa },
+      { bond: bot, dataUscita: "2027-02-01", shockPct: 0 },
+      { bond: bot, dataUscita: "2027-07-14", shockPct: 0 },
+    ];
+    for (const scenario of scenari) {
+      const e = simulaUscita(scenario)!;
+      expect(
+        e.controvaloreUscita +
+          e.rateoVendita -
+          e.commissioniVendita +
+          e.cedoleLorde -
+          e.impostaCedoleRateo -
+          e.impostaDisaggio -
+          e.impostaPlusvalenza,
+      ).toBe(e.incassoNetto);
+      expect(e.incassoNetto - e.esborso).toBe(e.guadagnoNetto);
+    }
+    // Il disaggio ha la sua imposta, fuori da quella su cedole e rateo.
+    const venduto = simulaUscita(scenari[2])!;
+    expect(venduto.impostaDisaggio).toBeGreaterThan(0);
+    expect(venduto.impostaCedoleRateo).toBe(
+      Math.round((venduto.cedoleLorde + venduto.rateoVendita) * 0.125),
+    );
+    // Il BOT venduto prima del rimborso si vede restituire l'imposta sullo
+    // scarto che resta; a scadenza non c'è niente da restituire.
+    expect(simulaUscita(scenari[4])!.impostaDisaggio).toBeLessThan(0);
+    expect(simulaUscita(scenari[5])!.impostaDisaggio).toBe(0);
   });
 
   it("niente rendimento annualizzato sotto il mese, e niente su titoli scaduti", () => {

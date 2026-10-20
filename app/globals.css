@@ -113,18 +113,23 @@ body {
 }
 
 /*
- * La tabella del listino. Scorre dentro il suo riquadro con l'intestazione
- * ferma; le regole valgono solo per le sue celle dirette, non per le tabelle
- * dentro una riga aperta (il conto d'acquisto, gli scenari d'uscita).
+ * La tabella del listino. Si allunga con la pagina, con una copia
+ * dell'intestazione ferma in cima allo schermo (`.tabella-testa`, vedi
+ * `ScorrimentoTabella`); le regole valgono solo per le sue celle dirette, non
+ * per le tabelle dentro una riga aperta (il conto d'acquisto, gli scenari
+ * d'uscita).
  */
-.tabella-scroll { max-height: 75vh; scrollbar-width: thin; }
-.tabella-scroll.tabella-intera { max-height: none; }
-.tabella-scroll th { white-space: nowrap; }
+.tabella-scroll { scrollbar-width: thin; }
+.tabella-scroll th, .tabella-testa th { white-space: nowrap; }
+/* I nomi col glossario sono bottoni, che non ereditano il maiuscolo dell'intestazione. */
+.tabella-scroll th button, .tabella-testa th button { text-transform: inherit; }
 .tabella-scroll > table > tbody > tr > td { padding-top: 10px; padding-bottom: 10px; }
 .tabella-scroll > table > tbody > tr[role="button"]:hover > td { background: var(--superficie-2); }
 .tabella-scroll > table > tbody > tr[aria-expanded="true"] > td { background: var(--evidenza); }
 /* La colonna da guardare per prima (lo YTM netto) ha un fondo suo. */
-.tabella-scroll .colonna-evidenza { background: var(--evidenza); }
+.tabella-scroll .colonna-evidenza, .tabella-testa .colonna-evidenza { background: var(--evidenza); }
+/* Da tastiera si passa dall'intestazione vera: la copia si toglie di mezzo. */
+.tabella-ferma:has(> .tabella-scroll > table > thead :focus-visible) > .tabella-testa { visibility: hidden; }
 
 /*
  * Sul telefono la tabella scorre in orizzontale: il nome del titolo resta
@@ -134,6 +139,7 @@ body {
  */
 @media (max-width: 767px) {
   .tabella-scroll > table > thead > tr > th:first-child,
+  .tabella-testa > table > thead > tr > th:first-child,
   .tabella-scroll > table > tbody > tr > td.cella-ferma {
     position: sticky;
     left: 0;
@@ -141,7 +147,8 @@ body {
     background: var(--superficie);
     box-shadow: 1px 0 0 var(--griglia);
   }
-  .tabella-scroll > table > thead > tr > th:first-child { z-index: 3; background: var(--superficie-2); }
+  .tabella-scroll > table > thead > tr > th:first-child,
+  .tabella-testa > table > thead > tr > th:first-child { z-index: 3; background: var(--superficie-2); }
   .tabella-scroll > table > tbody > tr[aria-expanded="true"] > td.cella-ferma { background: var(--evidenza); }
   /* Lo schermo meno i margini del contenitore (16 per lato). */
   .dettaglio-riga {

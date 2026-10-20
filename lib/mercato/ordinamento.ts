@@ -86,15 +86,15 @@ export interface CandidatoOrdinabile {
   isin: string;
   dataScadenza: string;
   ytmNettoPct: number | null;
-  plusRimborso10k: number;
+  plusRimborso: number;
   cedolaAnnua: number;
   prezzo: number;
   /** Duration modificata: la misura della volatilità del prezzo. */
   durationModificata: number | null;
   /** Mediana degli euro scambiati per seduta; null se non letta. */
   scambiMediana: number | null;
-  /** Centesimi che si ritrovano a scadenza spendendo oggi 10.000 €; null se non calcolati. */
-  netto10kInvestiti: { incassi: number } | null;
+  /** Centesimi che si ritrovano a scadenza spendendo oggi la somma delle condizioni; null se non calcolati. */
+  nettoSuSpesa: { incassi: number } | null;
 }
 
 function round2(v: number): number {
@@ -111,11 +111,11 @@ function valore(t: CandidatoOrdinabile, chiave: ChiaveOrdinamento): number | str
     case "prezzo":
       return round2(t.prezzo);
     case "plus":
-      return t.plusRimborso10k;
+      return t.plusRimborso;
     case "ytm":
       return t.ytmNettoPct == null ? null : round2(t.ytmNettoPct);
     case "netto":
-      return t.netto10kInvestiti?.incassi ?? null;
+      return t.nettoSuSpesa?.incassi ?? null;
     case "duration":
       return t.durationModificata == null ? null : round2(t.durationModificata);
     case "scambi":

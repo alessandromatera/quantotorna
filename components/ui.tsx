@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import { ScorrimentoTabella } from "@/components/scorrimento-tabella";
 import { IntestazioneOrdinabile } from "@/components/termine";
+import { formatEuro } from "@/lib/client/format";
 
 /**
  * Primitive dell'interfaccia. Sono l'unico posto in cui vivono spaziature,
@@ -30,7 +32,7 @@ export function Testata({
           {titolo}
         </h1>
         {sottotitolo && (
-          <div className="mt-2 max-w-3xl text-base leading-relaxed text-[var(--inchiostro-2)]">
+          <div className="mt-2 text-base leading-relaxed text-[var(--inchiostro-2)]">
             {sottotitolo}
           </div>
         )}
@@ -101,7 +103,7 @@ export function Card({
         </div>
       )}
       {descrizione && (
-        <p className="mb-4 max-w-4xl text-sm text-[var(--inchiostro-muto)]">{descrizione}</p>
+        <p className="mb-4 text-sm text-[var(--inchiostro-muto)]">{descrizione}</p>
       )}
       {children}
     </section>
@@ -128,6 +130,41 @@ export function Misura({
         <div className="mt-0.5 text-xs text-[var(--inchiostro-2)]">{dettaglio}</div>
       )}
     </div>
+  );
+}
+
+/** Una riga di un conto. `forte` sono i totali: la somma delle righe sopra. */
+export interface RigaConto {
+  voce: ReactNode;
+  /** Centesimi, sempre positivi tranne nei totali: il segno sta in `segno`. */
+  importo: number;
+  segno: "" | "+" | "−";
+  forte?: boolean;
+  /** Da dove viene il numero, in piccolo sotto la voce. */
+  nota?: ReactNode;
+}
+
+/** Un conto riga per riga, come su un estratto: ogni totale somma le righe sopra. */
+export function TabellaConto({ righe }: { righe: RigaConto[] }) {
+  return (
+    <table className="cifre-tabellari w-full text-sm">
+      <tbody>
+        {righe.map((r, i) => (
+          <tr key={i} className={r.forte ? "border-t border-[var(--bordo)] font-semibold" : ""}>
+            <td className="py-1 pr-3 align-top">
+              {r.voce}
+              {r.nota && (
+                <div className="font-sans text-xs font-normal text-[var(--inchiostro-muto)]">
+                  {r.nota}
+                </div>
+              )}
+            </td>
+            <td className="w-4 py-1 text-right align-top text-[var(--inchiostro-muto)]">{r.segno}</td>
+            <td className="whitespace-nowrap py-1 text-right align-top">{formatEuro(r.importo)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -396,16 +433,17 @@ function FrecciaOrdine({ verso }: { verso: "asc" | "desc" | null }) {
 }
 
 /**
- * Tabella del sito: scorre in orizzontale sui telefoni, intestazioni e bordi
- * identici ovunque. Le celle si scrivono con <Cella>, che applica da sola
- * l'allineamento numerico. Va a filo del riquadro che la contiene: i
- * margini laterali li danno la prima e l'ultima cella.
+ * Tabella del sito: si allunga con la pagina con l'intestazione ferma in
+ * cima allo schermo (`ScorrimentoTabella`), scorre in orizzontale sui
+ * telefoni, intestazioni e bordi identici ovunque. Le celle si scrivono con
+ * <Cella>, che applica da sola l'allineamento numerico. Va a filo del
+ * riquadro che la contiene: i margini laterali li danno la prima e l'ultima
+ * cella.
  */
 export function Tabella({
   colonne,
   vuoto,
   nota,
-  intera = false,
   ordinamento,
   onOrdina,
   children,
@@ -414,12 +452,6 @@ export function Tabella({
   /** Messaggio da mostrare al posto delle righe quando non ce ne sono. */
   vuoto?: ReactNode;
   nota?: ReactNode;
-  /**
-   * Niente scorrimento interno: la tabella si allunga con la pagina. Per gli
-   * elenchi brevi da leggere per intero; i listini lunghi tengono lo
-   * scorrimento con l'intestazione ferma.
-   */
-  intera?: boolean;
   /** La colonna su cui la tabella è ordinata, e in che verso. */
   ordinamento?: { chiave: string; verso: "asc" | "desc" };
   /**
@@ -432,67 +464,69 @@ export function Tabella({
   onOrdina?: (chiave: string) => void;
   children?: ReactNode;
 }) {
+  // La stessa riga due volte: nella tabella e nella copia ferma in cima.
+  const intestazione = (
+    <tr className="text-left text-[0.6875rem] uppercase tracking-wider text-[var(--inchiostro-muto)]">
+      {colonne.map((c) => {
+        const ordinabile = c.ordina != null && onOrdina != null;
+        const attiva = ordinabile && ordinamento?.chiave === c.chiave;
+        return (
+          <th
+            key={c.chiave}
+            scope="col"
+            aria-sort={
+              attiva
+                ? ordinamento!.verso === "asc"
+                  ? "ascending"
+                  : "descending"
+                : undefined
+            }
+            onClick={ordinabile ? () => onOrdina!(c.chiave) : undefined}
+            className={`border-b border-[var(--bordo)] bg-[var(--superficie-2)] px-3 py-2.5 align-top font-semibold first:pl-4 last:pr-4 ${
+              c.numerica ? "text-right" : ""
+            } ${ordinabile ? "cursor-pointer select-none hover:text-[var(--inchiostro)]" : ""} ${
+              attiva ? "text-[var(--inchiostro)]" : ""
+            } ${
+              c.evidenza ? "colonna-evidenza text-[var(--inchiostro)]" : ""
+            }`}
+          >
+            <span className={`inline-flex items-start gap-1 ${c.numerica ? "flex-row-reverse text-right" : ""}`}>
+              {ordinabile && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    // Senza, il clic risalirebbe all'intestazione e ordinerebbe due volte.
+                    e.stopPropagation();
+                    onOrdina!(c.chiave);
+                  }}
+                  aria-label={`Ordina per ${c.ordina}${
+                    attiva ? (ordinamento!.verso === "asc" ? ", ora crescente" : ", ora decrescente") : ""
+                  }`}
+                  className={`mt-px rounded p-0.5 hover:bg-[var(--griglia)] ${
+                    attiva ? "text-[var(--accento)]" : ""
+                  }`}
+                >
+                  <FrecciaOrdine verso={attiva ? ordinamento!.verso : null} />
+                </button>
+              )}
+              <span>
+                {ordinabile ? (
+                  <IntestazioneOrdinabile>{c.intestazione}</IntestazioneOrdinabile>
+                ) : (
+                  c.intestazione
+                )}
+              </span>
+            </span>
+          </th>
+        );
+      })}
+    </tr>
+  );
   return (
     <div>
-      <div className={`tabella-scroll overflow-x-auto ${intera ? "tabella-intera" : ""}`}>
+      <ScorrimentoTabella intestazione={intestazione} colonne={colonne.map((c) => c.chiave).join(" ")}>
         <table className="w-full text-sm">
-          <thead className="sticky top-0 z-[2]">
-            <tr className="text-left text-[0.6875rem] uppercase tracking-wider text-[var(--inchiostro-muto)]">
-              {colonne.map((c) => {
-                const ordinabile = c.ordina != null && onOrdina != null;
-                const attiva = ordinabile && ordinamento?.chiave === c.chiave;
-                return (
-                  <th
-                    key={c.chiave}
-                    scope="col"
-                    aria-sort={
-                      attiva
-                        ? ordinamento!.verso === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : undefined
-                    }
-                    onClick={ordinabile ? () => onOrdina!(c.chiave) : undefined}
-                    className={`border-b border-[var(--bordo)] bg-[var(--superficie-2)] px-3 py-2.5 align-bottom font-semibold first:pl-4 last:pr-4 ${
-                      c.numerica ? "text-right" : ""
-                    } ${ordinabile ? "cursor-pointer select-none hover:text-[var(--inchiostro)]" : ""} ${
-                      attiva ? "text-[var(--inchiostro)]" : ""
-                    } ${
-                      c.evidenza ? "colonna-evidenza text-[var(--inchiostro)]" : ""
-                    }`}
-                  >
-                    <span className={`inline-flex items-start gap-1 ${c.numerica ? "flex-row-reverse text-right" : ""}`}>
-                      {ordinabile && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            // Senza, il clic risalirebbe all'intestazione e ordinerebbe due volte.
-                            e.stopPropagation();
-                            onOrdina!(c.chiave);
-                          }}
-                          aria-label={`Ordina per ${c.ordina}${
-                            attiva ? (ordinamento!.verso === "asc" ? ", ora crescente" : ", ora decrescente") : ""
-                          }`}
-                          className={`mt-px rounded p-0.5 hover:bg-[var(--griglia)] ${
-                            attiva ? "text-[var(--accento)]" : ""
-                          }`}
-                        >
-                          <FrecciaOrdine verso={attiva ? ordinamento!.verso : null} />
-                        </button>
-                      )}
-                      <span>
-                        {ordinabile ? (
-                          <IntestazioneOrdinabile>{c.intestazione}</IntestazioneOrdinabile>
-                        ) : (
-                          c.intestazione
-                        )}
-                      </span>
-                    </span>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
+          <thead>{intestazione}</thead>
           <tbody>
             {vuoto ? (
               <tr>
@@ -508,7 +542,7 @@ export function Tabella({
             )}
           </tbody>
         </table>
-      </div>
+      </ScorrimentoTabella>
       {nota && (
         <div className="border-t border-[var(--bordo)] px-4 py-3 text-xs leading-relaxed text-[var(--inchiostro-muto)]">
           {nota}

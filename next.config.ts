@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // `next dev` aggiungerebbe ad AGENTS.md un suo blocco in inglese, e lo
+  // rimetterebbe a ogni avvio; quello che dice sta già in AGENTS.md.
+  agentRules: false,
 };
 
 export default nextConfig;

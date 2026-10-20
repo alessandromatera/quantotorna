@@ -5,9 +5,10 @@ rendimento netto secondo il fisco italiano e la cifra finale in euro, per i
 titoli quotati sul MOT di Borsa Italiana.
 
 Sito statico (Next.js in esportazione statica): i conti della tabella si
-fanno alla compilazione, quelli che dipendono da chi guarda — nominale,
-prezzo, commissioni, zainetto — nel suo browser, con le stesse funzioni. Non
-c'è un server, né cookie, né statistiche di visita.
+fanno alla compilazione, su 10.000 nominali e senza commissioni; quelli che
+dipendono da chi guarda — nominale e commissioni per la tabella, in più
+prezzo e zainetto per le simulazioni — nel suo browser, con le stesse
+funzioni. Non c'è un server, né cookie, né statistiche di visita.
 
 ```sh
 npm ci
@@ -49,6 +50,12 @@ git config core.hooksPath scripts/hooks
 
 Gli ISIN e i dati di mercato sono pubblici e passano; quantità, importi,
 conti, email private e percorsi locali no.
+
+Chi lavora con Claude Code committa con la skill `commit`
+(`.claude/skills/commit`): prima del commit fa girare test e typecheck, poi
+quattro agenti in parallelo sulle modifiche — dati personali, sicurezza,
+conti finanziari e fiscali, documentazione in linea col codice — e non
+committa finché uno di loro blocca.
 
 ## Licenza
 

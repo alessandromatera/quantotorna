@@ -1,6 +1,7 @@
 "use client";
 
 import { Termine } from "@/components/termine";
+import { senzaCommissioni } from "@/lib/costi/commissioni";
 import { Bottone, Campo, classeCampo, classeInput } from "@/components/ui";
 import {
   CHIAVE_CONDIZIONI,
@@ -131,17 +132,14 @@ const percentuale = {
 
 /**
  * Le condizioni in una riga, per il bottone che apre il pannello: con che
- * nominale, commissioni e zainetto si stanno facendo le simulazioni, senza
- * doverlo aprire.
+ * nominale e commissioni si fanno la tabella e le simulazioni, e con che
+ * zainetto «Se esco prima», senza doverlo aprire.
  */
 export function riassuntoCondizioni(condizioni: Condizioni, oggi: string): string {
-  const { tariffa } = condizioni;
-  const senzaCommissioni =
-    tariffa.percentuale === 0 && tariffa.minimo === 0 && tariffa.massimo === 0 && tariffa.fisso === 0;
   const residuo = zainettoVivo(condizioni.zainetto, oggi).reduce((t, v) => t + v.importoResiduo, 0);
   return [
     `${formatNumero(condizioni.nominale)} € nominali`,
-    senzaCommissioni ? "senza commissioni" : "con le tue commissioni",
+    senzaCommissioni(condizioni.tariffa) ? "senza commissioni" : "con le tue commissioni",
     residuo > 0 ? `zainetto di ${formatEuro(residuo)}` : "zainetto vuoto",
   ].join(" · ");
 }
@@ -157,22 +155,36 @@ function Parte({ titolo, spiegazione, children }: { titolo: React.ReactNode; spi
   );
 }
 
+/**
+ * Il pannello lavora su una bozza e la applica solo con «Salva»: a ogni
+ * salvataggio la tabella rifà i conti di seicento titoli, e farlo a ogni
+ * tasto premuto rendeva lenta la scrittura.
+ */
 export function PannelloCondizioni({
-  condizioni,
-  onCambia,
+  condizioni: salvate,
+  onSalva,
   oggi,
 }: {
   condizioni: Condizioni;
-  onCambia: (c: Condizioni) => void;
+  onSalva: (c: Condizioni) => void;
   /** Il giorno dei prezzi: decide quali voci dello zainetto sono ancora vive. */
   oggi: string;
 }) {
+  const [condizioni, cambia] = useState(salvate);
+  // Quando cambiano quelle salvate (lette dal browser, o appena salvate) la
+  // bozza riparte da loro.
+  const [ultimeSalvate, setUltimeSalvate] = useState(salvate);
+  if (salvate !== ultimeSalvate) {
+    setUltimeSalvate(salvate);
+    cambia(salvate);
+  }
+  const daSalvare = JSON.stringify(condizioni) !== JSON.stringify(salvate);
   const { tariffa, zainetto } = condizioni;
   const annoCorrente = Number(oggi.slice(0, 4));
   const [nuovoAnno, setNuovoAnno] = useState(String(annoCorrente));
   const [nuovoImporto, setNuovoImporto] = useState("");
   const cambiaTariffa = (campi: Partial<typeof tariffa>) =>
-    onCambia({ ...condizioni, tariffa: { ...tariffa, ...campi } });
+    cambia({ ...condizioni, tariffa: { ...tariffa, ...campi } });
 
   function aggiungiVoce() {
     const anno = Number(nuovoAnno);
@@ -181,7 +193,7 @@ export function PannelloCondizioni({
     // Una voce per anno: due dello stesso anno si sommano.
     const altre = zainetto.filter((v) => v.annoCompetenza !== anno);
     const stesso = zainetto.find((v) => v.annoCompetenza === anno)?.importoResiduo ?? 0;
-    onCambia({
+    cambia({
       ...condizioni,
       zainetto: [...altre, vocePerAnno(anno, stesso + importo)].sort(
         (a, b) => a.annoCompetenza - b.annoCompetenza,
@@ -191,31 +203,40 @@ export function PannelloCondizioni({
   }
 
   return (
-    <div className="space-y-5">
-      <p className="max-w-3xl text-sm text-[var(--inchiostro-2)]">
-        Servono alle simulazioni sotto ogni titolo: la tabella resta su 10.000 nominali e senza
-        commissioni, perché sia uguale per tutti. Quello che scrivi qui resta in questo browser: il
-        sito non ha un server a cui mandarlo.
+    <form
+      className="space-y-5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSalva(condizioni);
+      }}
+    >
+      <p className="text-sm text-[var(--inchiostro-2)]">
+        Nominale e commissioni valgono per la tabella e per le simulazioni sotto ogni titolo; lo
+        zainetto solo per «Se esco prima». Si applicano quando salvi. Quello che scrivi qui resta in
+        questo browser: il sito non ha un server a cui mandarlo.
       </p>
       <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1.2fr)]">
-        <Parte titolo="Simulazione" spiegazione="Il nominale di partenza delle simulazioni d'acquisto e di uscita.">
+        <Parte
+          titolo="Tabella e simulazioni"
+          spiegazione="Il nominale della tabella e delle simulazioni. Il «netto a scadenza» lo usa come somma spesa: 5.000 nominali, ogni 5.000 € spesi."
+        >
           <div className="space-y-3">
             <CampoNumero
-              etichetta="Nominale da simulare"
+              etichetta="Nominale"
               valore={condizioni.nominale}
               inTesto={formatNumeroIntero}
               daTesto={(t) => {
                 const n = parseQuantitaIT(t);
                 return n != null && n > 0 && n <= 100_000_000 ? n : null;
               }}
-              onCambia={(nominale) => onCambia({ ...condizioni, nominale })}
+              onCambia={(nominale) => cambia({ ...condizioni, nominale })}
               unita="€ nom."
             />
             <CampoNumero
               etichetta="Inflazione che ti aspetti"
               valore={condizioni.inflazioneAttesa}
               {...percentuale}
-              onCambia={(inflazioneAttesa) => onCambia({ ...condizioni, inflazioneAttesa })}
+              onCambia={(inflazioneAttesa) => cambia({ ...condizioni, inflazioneAttesa })}
               unita="% l'anno"
               suggerimento="Per leggere l'inflazione di pareggio dei BTP€i."
             />
@@ -269,7 +290,7 @@ export function PannelloCondizioni({
               Il tuo <Termine chiave="zainetto">zainetto fiscale</Termine>
             </>
           }
-          spiegazione="Le minusvalenze ancora da compensare, per anno in cui sono nate: valgono fino al 31 dicembre del quarto anno dopo. Le usa «Se esco prima» per tassare l'eventuale plusvalenza."
+          spiegazione="Le minusvalenze ancora da compensare, per anno in cui sono nate: valgono fino al 31 dicembre del quarto anno dopo. Le usa «Se esco prima» per tassare l'eventuale plusvalenza; la tabella no, perché lo zainetto si consuma una volta sola e non per ogni riga."
         >
           {zainetto.length > 0 && (
             <ul className="mb-3 divide-y divide-[var(--griglia)] rounded-md border border-[var(--bordo)] text-sm">
@@ -287,7 +308,7 @@ export function PannelloCondizioni({
                   <button
                     type="button"
                     onClick={() =>
-                      onCambia({
+                      cambia({
                         ...condizioni,
                         zainetto: zainetto.filter((x) => x.annoCompetenza !== v.annoCompetenza),
                       })
@@ -309,6 +330,13 @@ export function PannelloCondizioni({
                 max={annoCorrente}
                 value={nuovoAnno}
                 onChange={(e) => setNuovoAnno(e.target.value)}
+                onKeyDown={(e) => {
+                  // Invio qui aggiunge la voce, non salva il pannello.
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    aggiungiVoce();
+                  }
+                }}
                 className={`${classeCampo} w-24`}
               />
             </Campo>
@@ -320,14 +348,17 @@ export function PannelloCondizioni({
                   value={nuovoImporto}
                   onChange={(e) => setNuovoImporto(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") aggiungiVoce();
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      aggiungiVoce();
+                    }
                   }}
                   className={`${classeCampo} w-32`}
                 />
                 <span className="text-sm text-[var(--inchiostro-muto)]">€</span>
               </span>
             </Campo>
-            <Bottone tipo="secondario" onClick={aggiungiVoce}>
+            <Bottone type="button" tipo="secondario" onClick={aggiungiVoce}>
               Aggiungi
             </Bottone>
           </div>
@@ -336,7 +367,7 @@ export function PannelloCondizioni({
               type="checkbox"
               checked={condizioni.compensazioneTitoliStatoRidotta}
               onChange={(e) =>
-                onCambia({ ...condizioni, compensazioneTitoliStatoRidotta: e.target.checked })
+                cambia({ ...condizioni, compensazioneTitoliStatoRidotta: e.target.checked })
               }
               className="mt-0.5 h-4 w-4 accent-[var(--accento-pieno)]"
             />
@@ -351,11 +382,24 @@ export function PannelloCondizioni({
           </label>
         </Parte>
       </div>
-      <div className="border-t border-[var(--griglia)] pt-4">
-        <Bottone tipo="secondario" onClick={() => onCambia(CONDIZIONI_PREDEFINITE)}>
+      <div className="flex flex-wrap items-center gap-3 border-t border-[var(--griglia)] pt-4">
+        <Bottone type="submit" disabled={!daSalvare}>
+          {daSalvare ? "Salva" : "Salvate"}
+        </Bottone>
+        {daSalvare && (
+          <Bottone type="button" tipo="secondario" onClick={() => cambia(salvate)}>
+            Annulla le modifiche
+          </Bottone>
+        )}
+        <Bottone
+          type="button"
+          tipo="secondario"
+          className="sm:ml-auto"
+          onClick={() => cambia(CONDIZIONI_PREDEFINITE)}
+        >
           Torna alle condizioni di partenza
         </Bottone>
       </div>
-    </div>
+    </form>
   );
 }

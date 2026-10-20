@@ -23,13 +23,15 @@ import { CalcolatoreUscita, type ContestoFiscale } from "@/components/whatif";
 import type { Catalogo } from "@/lib/catalogo/formato";
 import { raggruppaScartate } from "@/lib/catalogo/scartate";
 import {
+  NOMINALE_RIFERIMENTO,
   parametriTitolo,
+  righeConCondizioni,
   type MetricheCatalogo,
   type RigaFlussiNoti,
 } from "@/lib/catalogo/metriche";
 import { TIPI_CATALOGO, type TipoCatalogo } from "@/lib/categorie";
 import { zainettoVivo, type Condizioni } from "@/lib/client/condizioni";
-import type { TariffaMercato } from "@/lib/costi/commissioni";
+import { senzaCommissioni, type TariffaMercato } from "@/lib/costi/commissioni";
 import {
   formatDataIT,
   formatEuro,
@@ -207,7 +209,7 @@ function colonne(nominale: number): Colonna[] {
       numerica: true,
       evidenza: true,
     },
-    // Lo stesso rendimento in euro, ma su 10.000 € spesi e non sui nominali:
+    // Lo stesso rendimento in euro, ma sulla somma spesa e non sui nominali:
     // è la cifra da confrontare quando si decide dove mettere una somma, e a
     // differenza dello YTM premia anche il tempo.
     {
@@ -216,7 +218,9 @@ function colonne(nominale: number): Colonna[] {
       intestazione: (
         <>
           <Termine chiave="nettoAScadenza">Netto a scadenza</Termine>
-          <span className="block whitespace-normal font-normal normal-case tracking-normal">ogni 10.000 € spesi</span>
+          <span className="block whitespace-normal font-normal normal-case tracking-normal">
+            ogni {formatNumero(nominale)} € spesi
+          </span>
         </>
       ),
       numerica: true,
@@ -518,7 +522,7 @@ function Dettaglio({
           Chiudi
         </button>
       </div>
-      <p className="mt-3 mb-4 max-w-4xl text-sm text-[var(--inchiostro-2)]">
+      <p className="mt-3 mb-4 text-sm text-[var(--inchiostro-2)]">
         <strong className="text-[var(--inchiostro)]">{d.famiglia}.</strong> {d.nota}
       </p>
       {vista === "acquisto" ? (
@@ -546,7 +550,7 @@ function Dettaglio({
 function Introduzione({ children, azioni }: { children: ReactNode; azioni?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 border-b border-[var(--bordo)] px-4 py-3">
-      <p className="max-w-3xl text-sm text-[var(--inchiostro-2)]">{children}</p>
+      <p className="text-sm text-[var(--inchiostro-2)]">{children}</p>
       {azioni}
     </div>
   );
@@ -573,7 +577,19 @@ export function Mercato({
   const [aperta, setAperta] = useState<{ isin: string; vista: Vista } | null>(null);
   const cambiaAperta = (isin: string) =>
     setAperta((a) => (a?.isin === isin ? null : { isin, vista: "acquisto" }));
-  const nominale = 10_000;
+  const nominale = condizioni.nominale;
+  /**
+   * Le righe col nominale e la tariffa salvati da chi guarda. Con quelli di
+   * riferimento sono le righe della pagina compilata, così come sono; con
+   * altri si rifanno qui (un paio di decimi di secondo su seicento titoli),
+   * una volta per salvataggio. Lo zainetto non entra: vedi `CondizioniTabella`.
+   */
+  const { percentuale, minimo, massimo, fisso } = condizioni.tariffa;
+  const righe = useMemo(() => {
+    const tariffa = { percentuale, minimo, massimo, fisso };
+    if (nominale === NOMINALE_RIFERIMENTO && senzaCommissioni(tariffa)) return metriche;
+    return { ...metriche, ...righeConCondizioni(metriche, euribor6m, { nominale, tariffa }) };
+  }, [metriche, euribor6m, nominale, percentuale, minimo, massimo, fisso]);
 
   /**
    * Tutte le righe con i campi su cui i filtri lavorano, una volta sola: i
@@ -582,7 +598,7 @@ export function Mercato({
    */
   const indicizzabili = useMemo(
     () => ({
-      titoli: metriche.flussiNoti.map((r) => ({
+      titoli: righe.flussiNoti.map((r) => ({
         ...r,
         toccaZainetto: r.plusCompensabile,
         rendimentoPct: r.ytmNettoPct,
@@ -590,14 +606,14 @@ export function Mercato({
       })),
       // La volatilità è la duration: dove la tabella non la mostra (CCTeu,
       // indicizzati) il titolo non entra in nessuna fascia.
-      variabili: metriche.variabili.map((r) => ({
+      variabili: righe.variabili.map((r) => ({
         ...r,
         toccaZainetto: descriviTitolo(r).toccaZainetto,
         rendimentoPct: r.ytmNettoPct,
         durationModificata: null,
         scambiMediana: r.scambi?.mediana ?? null,
       })),
-      indicizzati: metriche.indicizzati.map((r) => ({
+      indicizzati: righe.indicizzati.map((r) => ({
         ...r,
         toccaZainetto: descriviTitolo(r).toccaZainetto,
         rendimentoPct: r.ytmRealeLordoPct,
@@ -605,7 +621,7 @@ export function Mercato({
         scambiMediana: r.scambi?.mediana ?? null,
       })),
     }),
-    [metriche],
+    [righe],
   );
 
   const tutte = useMemo(
@@ -926,8 +942,8 @@ export function Mercato({
           </p>
         </div>
 
-        {/* Le schede, e a destra le condizioni delle simulazioni: chi le ha
-            cambiate le vede scritte senza aprire niente. */}
+        {/* Le schede, e a destra le condizioni della tabella e delle
+            simulazioni: chi le ha cambiate le vede scritte senza aprire niente. */}
         <div className="flex flex-wrap items-end justify-between gap-x-6 border-b border-[var(--bordo)] px-4 pt-3">
           <Segmentato
             contenitore
@@ -964,7 +980,7 @@ export function Mercato({
 
         {condizioniAperte && (
           <div className="border-b border-[var(--bordo)] bg-[var(--superficie-2)] px-4 py-5">
-            <PannelloCondizioni condizioni={condizioni} onCambia={setCondizioni} oggi={oggi} />
+            <PannelloCondizioni condizioni={condizioni} onSalva={setCondizioni} oggi={oggi} />
           </div>
         )}
 
@@ -997,7 +1013,8 @@ export function Mercato({
                   <>
                     {" "}
                     Non sono in elenco {metriche.nascostiYtmNegativo} titoli che a scadenza
-                    restituiscono meno di quanto costano oggi, imposte comprese.
+                    restituiscono meno di quanto costano oggi, imposte comprese e senza
+                    commissioni.
                   </>
                 )}
               </span>
@@ -1014,7 +1031,7 @@ export function Mercato({
                 </span>
               </summary>
               <div className="px-4 pb-4">
-                <p className="mb-3 max-w-4xl text-xs text-[var(--inchiostro-muto)]">
+                <p className="mb-3 text-xs text-[var(--inchiostro-muto)]">
                   Ogni punto è un titolo: quanto rende netto a scadenza (verticale) e fra quanti
                   anni rimborsa (orizzontale). Si vede in un colpo dove allungare la scadenza viene
                   pagato, e quanto stanno distanti Italia ed estero a parità di scadenza, che è lo
@@ -1024,18 +1041,21 @@ export function Mercato({
               </div>
             </details>
 
-            {/* Sopra la tabella e chiuso: sotto, con la tabella che scorre nel
-                suo riquadro, restava sempre in fondo allo schermo a togliere
+            {/* Sopra la tabella e chiuso: sotto, quando la tabella scorreva in
+                un riquadro suo, restava sempre in fondo allo schermo a togliere
                 righe. */}
             <details className="group border-b border-[var(--bordo)]">
               <summary className="flex cursor-pointer items-center gap-2 px-4 py-2.5 text-sm font-medium hover:bg-[var(--superficie-2)]">
                 <Chevron className="ruota-aperto text-[var(--inchiostro-muto)]" />
                 <span>Come si leggono le colonne</span>
               </summary>
-              <p className="max-w-4xl px-4 pb-4 text-xs leading-relaxed text-[var(--inchiostro-muto)]">
-                YTM netto: imposte al 12,5% effettivo e prezzo di chiusura, commissioni escluse.
-                «Netto a scadenza» è lo stesso rendimento in euro, su 10.000 € spesi oggi invece
-                che sui nominali: premia anche il tempo, quindi fra scadenze diverse dice quanto
+              <p className="px-4 pb-4 text-xs leading-relaxed text-[var(--inchiostro-muto)]">
+                YTM netto: imposte al 12,5% effettivo e prezzo di chiusura,{" "}
+                {senzaCommissioni(condizioni.tariffa)
+                  ? "commissioni escluse"
+                  : "con le commissioni della tua tariffa"}
+                . «Netto a scadenza» è lo stesso rendimento in euro, su{" "}
+                {formatNumero(nominale)} € spesi oggi invece che sui nominali: premia anche il tempo, quindi fra scadenze diverse dice quanto
                 ci si ritrova, non quanto rende. «Plus a rimborso» <strong>non è un extra da
                 sommare</strong> allo YTM netto: ci è già dentro. È il differenziale certo fra
                 prezzo e rimborso — misurato dal prezzo teorico, perché il disaggio di emissione
@@ -1070,19 +1090,19 @@ export function Mercato({
                         etichetta={`${aperta?.isin === t.isin ? "Chiudi" : "Apri"} le simulazioni di ${t.nome}`}
                       >
                         <CellaTitolo titolo={t} aperta={aperta?.isin === t.isin} />
-                        <CellaScadenza data={t.dataScadenza} anni={t.rendimento10k?.anni ?? null} />
+                        <CellaScadenza data={t.dataScadenza} anni={t.rendimentoNominale?.anni ?? null} />
                         <CellaCedola titolo={t} nominale={nominale} oggi={oggi} />
                         <Cella numerica>{formatPrezzo(t.prezzo)}</Cella>
                         {/* Nessun colore su questa cella: un differenziale negativo
                             non è un titolo peggiore, è cedola alta pagata in
                             anticipo, e lo YTM netto lo ha già assorbito. */}
                         <Cella numerica>
-                          {t.plusRimborso10k === 0 ? "—" : formatEuroSegno(t.plusRimborso10k)}
-                          {t.plusRimborso10k !== 0 &&
+                          {t.plusRimborso === 0 ? "—" : formatEuroSegno(t.plusRimborso)}
+                          {t.plusRimborso !== 0 &&
                             (!t.plusCompensabile ? (
                               <Sotto>fuori dallo zainetto</Sotto>
                             ) : (
-                              t.plusRimborso10k < 0 && <Sotto>minus: alimenta lo zainetto</Sotto>
+                              t.plusRimborso < 0 && <Sotto>minus: alimenta lo zainetto</Sotto>
                             ))}
                         </Cella>
                         <Cella numerica evidenza>
@@ -1102,18 +1122,18 @@ export function Mercato({
                             )}
                         </Cella>
                         <Cella numerica>
-                          {t.netto10kInvestiti == null ? (
+                          {t.nettoSuSpesa == null ? (
                             "—"
                           ) : (
                             <>
-                              {formatEuro(t.netto10kInvestiti.incassi)}
+                              {formatEuro(t.nettoSuSpesa.incassi)}
                               <span className="block text-xs font-medium text-[var(--delta-buono)]">
-                                {formatEuroSegno(t.netto10kInvestiti.guadagno)}
+                                {formatEuroSegno(t.nettoSuSpesa.guadagno)}
                               </span>
                               {/* Sotto l'anno l'annualizzazione di un guadagno di
                                   pochi giorni sarebbe fuorviante: solo il totale. */}
-                              {t.rendimento10k && t.rendimento10k.anni >= 1 && (
-                                <Sotto>{formatEuroSegno(t.netto10kInvestiti.guadagnoAnnuo)}/anno</Sotto>
+                              {t.rendimentoNominale && t.rendimentoNominale.anni >= 1 && (
+                                <Sotto>{formatEuroSegno(t.nettoSuSpesa.guadagnoAnnuo)}/anno</Sotto>
                               )}
                             </>
                           )}
@@ -1157,7 +1177,6 @@ export function Mercato({
             </Introduzione>
             <Tabella
               colonne={COLONNE_VARIABILI}
-              intera
               vuoto={variabili.length === 0 ? "Nessun titolo con questi filtri." : undefined}
               nota={
                 <>
@@ -1215,7 +1234,6 @@ export function Mercato({
             </Introduzione>
             <Tabella
               colonne={COLONNE_INDICIZZATI}
-              intera
               vuoto={indicizzati.length === 0 ? "Nessun titolo con questi filtri." : undefined}
               nota={
                 <>

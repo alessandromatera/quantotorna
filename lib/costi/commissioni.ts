@@ -30,6 +30,11 @@ export const TARIFFA_NULLA: TariffaMercato = {
   fisso: 0,
 };
 
+/** La tariffa non fa pagare niente, in nessuna sua voce. */
+export function senzaCommissioni(t: TariffaMercato): boolean {
+  return t.percentuale === 0 && t.minimo === 0 && t.massimo === 0 && t.fisso === 0;
+}
+
 /** Commissione di un singolo eseguito. */
 export function commissione(params: {
   tariffa: TariffaMercato;
