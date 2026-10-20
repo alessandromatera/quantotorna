@@ -112,3 +112,15 @@ export function euroInInput(centesimi: number): string {
 export function numeroInInput(valore: number): string {
   return String(Math.round(valore * 1e6) / 1e6).replace(".", ",");
 }
+
+const MESI = [
+  "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+  "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre",
+];
+
+/** "2026-09" → "settembre 2026". Un mese scritto male passa così com'è. */
+export function formatMeseIT(mese: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(mese);
+  const nome = m ? MESI[Number(m[2]) - 1] : undefined;
+  return m && nome ? `${nome} ${m[1]}` : mese;
+}

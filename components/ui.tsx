@@ -4,72 +4,103 @@ import type { ReactNode } from "react";
  * Primitive dell'interfaccia. Sono l'unico posto in cui vivono spaziature,
  * bordi e stati: se una pagina ha bisogno di una tabella, di un filtro o di
  * un'intestazione, li prende da qui invece di riscriverli con classi proprie.
+ *
+ * Il tono è quello di uno strumento di lavoro: angoli appena smussati,
+ * bordi sottili, un solo colore d'accento, i numeri in primo piano.
  */
 
-/** Intestazione di pagina: titolo, spiegazione di una riga, azioni a destra. */
-export function Intestazione({
+/**
+ * Testata di pagina: una fascia bianca a tutta larghezza col titolo, una
+ * riga di spiegazione e, sotto, i dati di riferimento della pagina.
+ */
+export function Testata({
   titolo,
-  descrizione,
-  azioni,
+  sottotitolo,
+  children,
 }: {
   titolo: string;
-  descrizione?: ReactNode;
-  azioni?: ReactNode;
+  sottotitolo?: ReactNode;
+  children?: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{titolo}</h1>
-        {descrizione && (
-          <p className="mt-1 text-sm text-[var(--inchiostro-2)]">{descrizione}</p>
+    <div className="border-b border-[var(--bordo)] bg-[var(--superficie)]">
+      <div className="contenitore py-7 lg:py-9">
+        <h1 className="text-[1.75rem] font-semibold leading-tight tracking-tight sm:text-[2rem]">
+          {titolo}
+        </h1>
+        {sottotitolo && (
+          <div className="mt-2 max-w-3xl text-base leading-relaxed text-[var(--inchiostro-2)]">
+            {sottotitolo}
+          </div>
         )}
+        {children && <div className="mt-6">{children}</div>}
       </div>
-      {azioni && <div className="flex shrink-0 flex-wrap gap-2">{azioni}</div>}
-    </header>
+    </div>
   );
 }
 
+/** Riga di dati di riferimento sotto il titolo: etichetta piccola, valore, nota. */
+export function Dati({ children }: { children: ReactNode }) {
+  return (
+    <dl className="grid grid-cols-2 overflow-hidden rounded-lg border border-[var(--bordo)] sm:flex sm:flex-wrap">
+      {children}
+    </dl>
+  );
+}
+
+export function Dato({
+  etichetta,
+  valore,
+  nota,
+}: {
+  etichetta: ReactNode;
+  valore: ReactNode;
+  nota?: ReactNode;
+}) {
+  return (
+    <div className="-mb-px -mr-px border-r border-b border-[var(--bordo)] px-4 py-3 sm:min-w-[11rem] sm:flex-1 sm:border-b-0 sm:last:border-r-0">
+      <dt className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--inchiostro-muto)]">
+        {etichetta}
+      </dt>
+      <dd className="cifre-tabellari mt-1 text-lg font-semibold">{valore}</dd>
+      {nota && <dd className="text-xs text-[var(--inchiostro-muto)]">{nota}</dd>}
+    </div>
+  );
+}
+
+/** Freccia di un riquadro che si apre: ruota quando il riquadro è aperto. */
+export function Chevron({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" className={`h-4 w-4 shrink-0 transition-transform ${className}`} aria-hidden>
+      <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** Riquadro bianco con titolo e spiegazione facoltativi. */
 export function Card({
   titolo,
   descrizione,
   azioni,
   children,
   className = "",
-  espandibile = false,
 }: {
   titolo?: ReactNode;
   descrizione?: ReactNode;
   azioni?: ReactNode;
   children: ReactNode;
   className?: string;
-  espandibile?: boolean;
 }) {
-  if (espandibile && titolo) return (
-    <details className={`rounded-2xl border border-[var(--bordo)] bg-[var(--superficie)] p-4 sm:p-5 ${className}`}>
-      <summary className="cursor-pointer text-base font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--serie-1)]">{titolo}<span className="ml-2 text-xs font-normal text-[var(--inchiostro-muto)]">Dettagli</span></summary>
-      <div className="mt-4">
-        {descrizione && <p className="mb-3 text-xs text-[var(--inchiostro-muto)]">{descrizione}</p>}
-        {azioni && <div className="mb-3 flex flex-wrap gap-2">{azioni}</div>}
-        {children}
-      </div>
-    </details>
-  );
   return (
-    <section
-      className={`rounded-2xl border border-[var(--bordo)] bg-[var(--superficie)] p-4 sm:p-5 ${className}`}
-    >
+    <section className={`rounded-lg border border-[var(--bordo)] bg-[var(--superficie)] p-4 sm:p-5 ${className}`}>
       {(titolo || azioni) && (
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          {titolo && (
-            <h2 className="text-base font-semibold tracking-tight text-[var(--inchiostro)]">
-              {titolo}
-            </h2>
-          )}
+        <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+          {titolo && <h2 className="text-base font-semibold">{titolo}</h2>}
           {azioni && <div className="flex flex-wrap gap-2">{azioni}</div>}
         </div>
       )}
       {descrizione && (
-        <p className="mb-3 text-xs text-[var(--inchiostro-muto)]">{descrizione}</p>
+        <p className="mb-4 max-w-4xl text-sm text-[var(--inchiostro-muto)]">{descrizione}</p>
       )}
       {children}
     </section>
@@ -88,10 +119,10 @@ export function Misura({
 }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-[var(--inchiostro-muto)]">
+      <div className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--inchiostro-muto)]">
         {etichetta}
       </div>
-      <div className="cifre-tabellari mt-0.5 font-semibold">{valore}</div>
+      <div className="cifre-tabellari mt-1 text-lg font-semibold">{valore}</div>
       {dettaglio && (
         <div className="mt-0.5 text-xs text-[var(--inchiostro-2)]">{dettaglio}</div>
       )}
@@ -101,11 +132,23 @@ export function Misura({
 
 type Tono = "critico" | "avviso" | "ok" | "info";
 
-const TONI: Record<Tono, { icona: string; colore: string }> = {
-  critico: { icona: "⛔", colore: "var(--stato-critico)" },
-  avviso: { icona: "⚠️", colore: "var(--stato-avviso)" },
-  ok: { icona: "✅", colore: "var(--stato-ok)" },
-  info: { icona: "ℹ️", colore: "var(--serie-1)" },
+/**
+ * Icone disegnate e non emoji: le emoji cambiano faccia da un sistema
+ * all'altro, e su un avviso serio una faccina colorata stona.
+ */
+const ICONE: Record<Tono, ReactNode> = {
+  critico: <path d="M10 6v5M10 14h.01M7 2.5h6L17.5 7v6L13 17.5H7L2.5 13V7z" />,
+  avviso: <path d="M10 7.5v4M10 14.5h.01M8.7 3.3 2.2 14.5A1.5 1.5 0 0 0 3.5 16.7h13a1.5 1.5 0 0 0 1.3-2.2L11.3 3.3a1.5 1.5 0 0 0-2.6 0z" />,
+  ok: <path d="M6.5 10.2 9 12.7l4.5-5M10 17.5a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15z" />,
+  info: <path d="M10 9v4.5M10 6.5h.01M10 17.5a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15z" />,
+};
+
+const TONI: Record<Tono, { colore: string; tratto: string }> = {
+  critico: { colore: "var(--stato-critico)", tratto: "var(--stato-critico)" },
+  // Il giallo come tratto sul bianco non si vede: icona in inchiostro.
+  avviso: { colore: "var(--stato-avviso)", tratto: "var(--inchiostro)" },
+  ok: { colore: "var(--stato-ok)", tratto: "var(--stato-ok)" },
+  info: { colore: "var(--accento)", tratto: "var(--accento)" },
 };
 
 /**
@@ -114,14 +157,28 @@ const TONI: Record<Tono, { icona: string; colore: string }> = {
  * positivo che non c'è); `ok` resta per gli esiti riusciti.
  */
 export function Avviso({ tono, children }: { tono: Tono; children: ReactNode }) {
-  const { icona, colore } = TONI[tono];
+  const { colore, tratto } = TONI[tono];
   return (
     <div
       role={tono === "critico" || tono === "avviso" ? "alert" : "status"}
-      className="flex items-start gap-2 rounded-xl border bg-[var(--superficie)] p-3 text-sm"
-      style={{ borderColor: colore }}
+      className="flex items-start gap-2.5 rounded-lg border px-3.5 py-2.5 text-sm text-[var(--inchiostro-2)]"
+      style={{
+        borderColor: `color-mix(in srgb, ${colore} 35%, var(--bordo))`,
+        background: `color-mix(in srgb, ${colore} 6%, var(--superficie))`,
+      }}
     >
-      <span aria-hidden>{icona}</span>
+      <svg
+        viewBox="0 0 20 20"
+        className="mt-px h-[18px] w-[18px] shrink-0"
+        fill="none"
+        stroke={tratto}
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        {ICONE[tono]}
+      </svg>
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
@@ -142,14 +199,14 @@ export function Bottone({
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const stile =
     tipo === "primario"
-      ? "bg-[var(--serie-1)] text-white hover:opacity-90"
+      ? "border border-[var(--accento-pieno)] bg-[var(--accento-pieno)] text-white hover:opacity-90"
       : tipo === "pericolo"
         ? "border border-[var(--stato-critico)] text-[var(--stato-critico)] hover:bg-[var(--stato-critico)] hover:text-white"
-        : "border border-[var(--bordo)] text-[var(--inchiostro-2)] hover:bg-[var(--griglia)]";
+        : "border border-[var(--bordo)] bg-[var(--superficie)] text-[var(--inchiostro)] hover:border-[var(--bordo-forte)] hover:bg-[var(--superficie-2)]";
   return (
     <button
       {...props}
-      className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${stile} ${props.className ?? ""}`}
+      className={`inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors disabled:opacity-50 ${stile} ${props.className ?? ""}`}
     >
       {children}
     </button>
@@ -167,7 +224,7 @@ export function Campo({
 }) {
   return (
     <label className="block text-sm">
-      <span className="mb-1 block font-medium text-[var(--inchiostro-2)]">
+      <span className="mb-1 block text-xs font-medium text-[var(--inchiostro-2)]">
         {etichetta}
       </span>
       {children}
@@ -184,15 +241,19 @@ export function Campo({
  * Bordo, fondo e fuoco di un campo, senza larghezza: la sceglie chi lo usa.
  * Con `w-full` dentro, una larghezza aggiunta dopo perdeva o vinceva secondo
  * l'ordine delle regole nel CSS, non secondo quello delle classi.
+ *
+ * Sul telefono il testo è a 16 px: sotto, Safari ingrandisce la pagina a
+ * ogni tocco su un campo.
  */
 export const classeCampo =
-  "rounded-lg border border-[var(--bordo)] bg-[var(--sfondo)] px-3 py-2 text-sm outline-none focus:border-[var(--serie-1)]";
+  "h-9 rounded-md border border-[var(--bordo)] bg-[var(--superficie)] px-3 text-base outline-none transition-shadow focus:border-[var(--accento)] focus:ring-3 focus:ring-[var(--accento-tenue)] sm:text-sm";
 
 export const classeInput = `w-full ${classeCampo}`;
 
 /**
- * Gruppo di scelte mutuamente esclusive (filtri, ordinamenti, schede), con
- * un solo aspetto in tutto il sito.
+ * Gruppo di scelte mutuamente esclusive, con un solo aspetto in tutto il
+ * sito. Con `contenitore` sono le schede di una pagina (sottolineate), senza
+ * sono un selettore a pulsanti uniti.
  */
 export function Segmentato<T extends string>({
   voci,
@@ -201,22 +262,53 @@ export function Segmentato<T extends string>({
   etichetta,
   contenitore = false,
 }: {
-  voci: { valore: T; nome: ReactNode; punto?: string }[];
+  voci: { valore: T; nome: ReactNode; punto?: string; conteggio?: number }[];
   valore: T | null;
   onCambia: (v: T) => void;
   etichetta: string;
-  /** Racchiude le voci in un riquadro: usato per le schede di una pagina. */
+  /** Schede di una pagina: sottolineate, con il conteggio accanto. */
   contenitore?: boolean;
 }) {
+  if (contenitore) {
+    return (
+      <div role="tablist" aria-label={etichetta} className="-mb-px flex gap-5 overflow-x-auto">
+        {voci.map((v) => {
+          const attiva = v.valore === valore;
+          return (
+            <button
+              key={v.valore}
+              role="tab"
+              aria-selected={attiva}
+              onClick={() => onCambia(v.valore)}
+              className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 pt-1 pb-2.5 text-sm font-medium transition-colors ${
+                attiva
+                  ? "border-[var(--accento-pieno)] text-[var(--inchiostro)]"
+                  : "border-transparent text-[var(--inchiostro-muto)] hover:text-[var(--inchiostro)]"
+              }`}
+            >
+              {v.nome}
+              {v.conteggio != null && (
+                <span
+                  className={`cifre-tabellari rounded px-1.5 text-xs ${
+                    attiva
+                      ? "bg-[var(--accento-tenue)] text-[var(--accento)]"
+                      : "bg-[var(--griglia)] text-[var(--inchiostro-muto)]"
+                  }`}
+                >
+                  {v.conteggio}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <div
       role="tablist"
       aria-label={etichetta}
-      className={
-        contenitore
-          ? "flex gap-1 overflow-x-auto rounded-xl border border-[var(--bordo)] bg-[var(--superficie)] p-1"
-          : "flex flex-wrap items-center gap-2"
-      }
+      className="inline-flex flex-wrap overflow-hidden rounded-md border border-[var(--bordo)] bg-[var(--superficie)]"
     >
       {voci.map((v) => {
         const attiva = v.valore === valore;
@@ -226,11 +318,11 @@ export function Segmentato<T extends string>({
             role="tab"
             aria-selected={attiva}
             onClick={() => onCambia(v.valore)}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm transition-colors ${
+            className={`flex items-center gap-1.5 whitespace-nowrap border-r border-[var(--bordo)] px-3 py-1.5 text-sm transition-colors last:border-r-0 ${
               attiva
-                ? "bg-[var(--serie-1)] font-medium text-white"
-                : "border border-[var(--bordo)] text-[var(--inchiostro-2)] hover:bg-[var(--griglia)]"
-            } ${contenitore && !attiva ? "border-transparent" : ""}`}
+                ? "bg-[var(--accento-pieno)] font-medium text-white"
+                : "text-[var(--inchiostro-2)] hover:bg-[var(--superficie-2)]"
+            }`}
           >
             {v.punto && (
               <span
@@ -247,39 +339,6 @@ export function Segmentato<T extends string>({
   );
 }
 
-/**
- * Filtro a più scelte con il proprio conteggio. Disattivato quando non ha
- * righe: un criterio che non selezionerebbe niente è un pulsante che non fa
- * niente, e vederlo spento dice più che vederlo sparire.
- */
-export function Chip({
-  etichetta,
-  attivo,
-  conteggio,
-  onCambia,
-}: {
-  etichetta: ReactNode;
-  attivo: boolean;
-  conteggio: number;
-  onCambia: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={attivo}
-      disabled={conteggio === 0}
-      onClick={onCambia}
-      className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40 ${
-        attivo
-          ? "bg-[var(--serie-1)] text-white"
-          : "bg-[var(--griglia)] text-[var(--inchiostro-2)] hover:bg-[var(--bordo)]"
-      }`}
-    >
-      {etichetta} <span className="cifre-tabellari opacity-70">{conteggio}</span>
-    </button>
-  );
-}
-
 /** Etichetta compatta accanto a un titolo (categoria, stato, nota). */
 export function Badge({
   children,
@@ -293,10 +352,10 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs ${
+      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-sm border px-1.5 text-[0.75rem] leading-[1.15rem] ${
         tono === "avviso"
-          ? "bg-[var(--stato-avviso)]/20 text-[var(--inchiostro-2)]"
-          : "bg-[var(--griglia)] text-[var(--inchiostro-2)]"
+          ? "border-[color-mix(in_srgb,var(--stato-avviso)_55%,var(--bordo))] bg-[color-mix(in_srgb,var(--stato-avviso)_14%,var(--superficie))] text-[var(--inchiostro)]"
+          : "border-[var(--bordo)] bg-[var(--superficie-2)] text-[var(--inchiostro-2)]"
       }`}
     >
       {colore && (
@@ -321,12 +380,25 @@ export interface Colonna {
    * è l'etichetta del bottone di ordinamento per chi non vede la freccia.
    */
   ordina?: string;
+  /** La colonna da guardare per prima: ha un fondo suo, dall'intestazione all'ultima riga. */
+  evidenza?: boolean;
+}
+
+/** Freccia d'ordinamento: piena sulla colonna attiva, accennata sulle altre. */
+function FrecciaOrdine({ verso }: { verso: "asc" | "desc" | null }) {
+  return (
+    <svg viewBox="0 0 12 16" className="h-3.5 w-3" aria-hidden>
+      <path d="M6 2.5 9 6.5H3z" fill="currentColor" opacity={verso === "asc" ? 1 : verso ? 0.2 : 0.45} />
+      <path d="M6 13.5 3 9.5h6z" fill="currentColor" opacity={verso === "desc" ? 1 : verso ? 0.2 : 0.45} />
+    </svg>
+  );
 }
 
 /**
  * Tabella del sito: scorre in orizzontale sui telefoni, intestazioni e bordi
  * identici ovunque. Le celle si scrivono con <Cella>, che applica da sola
- * l'allineamento numerico.
+ * l'allineamento numerico. Va a filo del riquadro che la contiene: i
+ * margini laterali li danno la prima e l'ultima cella.
  */
 export function Tabella({
   colonne,
@@ -362,8 +434,8 @@ export function Tabella({
     <div>
       <div className={`tabella-scroll overflow-x-auto ${intera ? "tabella-intera" : ""}`}>
         <table className="w-full text-sm">
-          <thead className="sticky top-0 z-[1] bg-[var(--superficie)]">
-            <tr className="border-b border-[var(--griglia)] text-left text-xs uppercase tracking-wide text-[var(--inchiostro-muto)]">
+          <thead className="sticky top-0 z-[2]">
+            <tr className="text-left text-[0.6875rem] uppercase tracking-wider text-[var(--inchiostro-muto)]">
               {colonne.map((c) => {
                 const ordinabile = c.ordina != null && onOrdina != null;
                 const attiva = ordinabile && ordinamento?.chiave === c.chiave;
@@ -378,25 +450,29 @@ export function Tabella({
                           : "descending"
                         : undefined
                     }
-                    className={`py-2 pr-3 font-medium ${c.numerica ? "text-right" : ""} ${
-                      attiva ? "text-[var(--inchiostro)]" : ""
+                    className={`border-b border-[var(--bordo)] bg-[var(--superficie-2)] px-3 py-2.5 align-bottom font-semibold first:pl-4 last:pr-4 ${
+                      c.numerica ? "text-right" : ""
+                    } ${attiva ? "text-[var(--inchiostro)]" : ""} ${
+                      c.evidenza ? "colonna-evidenza text-[var(--inchiostro)]" : ""
                     }`}
                   >
-                    {ordinabile && (
-                      <button
-                        type="button"
-                        onClick={() => onOrdina!(c.chiave)}
-                        aria-label={`Ordina per ${c.ordina}${
-                          attiva ? (ordinamento!.verso === "asc" ? ", ora crescente" : ", ora decrescente") : ""
-                        }`}
-                        className={`mr-1 rounded px-1 align-baseline hover:bg-[var(--griglia)] ${
-                          attiva ? "" : "opacity-40 hover:opacity-100"
-                        }`}
-                      >
-                        {attiva ? (ordinamento!.verso === "asc" ? "↑" : "↓") : "↕"}
-                      </button>
-                    )}
-                    {c.intestazione}
+                    <span className={`inline-flex items-start gap-1 ${c.numerica ? "flex-row-reverse text-right" : ""}`}>
+                      {ordinabile && (
+                        <button
+                          type="button"
+                          onClick={() => onOrdina!(c.chiave)}
+                          aria-label={`Ordina per ${c.ordina}${
+                            attiva ? (ordinamento!.verso === "asc" ? ", ora crescente" : ", ora decrescente") : ""
+                          }`}
+                          className={`mt-px rounded p-0.5 hover:bg-[var(--griglia)] ${
+                            attiva ? "text-[var(--accento)]" : ""
+                          }`}
+                        >
+                          <FrecciaOrdine verso={attiva ? ordinamento!.verso : null} />
+                        </button>
+                      )}
+                      <span>{c.intestazione}</span>
+                    </span>
                   </th>
                 );
               })}
@@ -407,7 +483,7 @@ export function Tabella({
               <tr>
                 <td
                   colSpan={colonne.length}
-                  className="py-3 text-sm text-[var(--inchiostro-muto)]"
+                  className="px-4 py-6 text-sm text-[var(--inchiostro-muto)]"
                 >
                   {vuoto}
                 </td>
@@ -419,7 +495,9 @@ export function Tabella({
         </table>
       </div>
       {nota && (
-        <p className="mt-2 text-xs text-[var(--inchiostro-muto)]">{nota}</p>
+        <div className="border-t border-[var(--bordo)] px-4 py-3 text-xs leading-relaxed text-[var(--inchiostro-muto)]">
+          {nota}
+        </div>
       )}
     </div>
   );
@@ -459,7 +537,7 @@ export function Riga({
     <tr
       className={`border-b border-[var(--griglia)] ${
         interattiva
-          ? "cursor-pointer hover:bg-[var(--griglia)]/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--serie-1)]"
+          ? "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--accento)]"
           : ""
       } ${className}`}
       onClick={
@@ -498,23 +576,38 @@ export function Cella({
   children,
   numerica = false,
   forte = false,
+  evidenza = false,
+  ferma = false,
   colSpan,
   className = "",
 }: {
   children?: ReactNode;
   numerica?: boolean;
   forte?: boolean;
+  /** Nella colonna evidenziata (vedi `Colonna.evidenza`). */
+  evidenza?: boolean;
+  /** Resta ferma a sinistra quando la tabella scorre, sul telefono: il nome del titolo. */
+  ferma?: boolean;
   colSpan?: number;
   className?: string;
 }) {
   return (
     <td
       colSpan={colSpan}
-      className={`py-2 pr-3 ${numerica ? "cifre-tabellari text-right" : ""} ${
+      className={`px-3 align-top first:pl-4 last:pr-4 ${numerica ? "cifre-tabellari text-right" : ""} ${
         forte ? "font-semibold" : ""
-      } ${className}`}
+      } ${evidenza ? "colonna-evidenza" : ""} ${ferma ? "cella-ferma" : ""} ${className}`}
     >
       {children}
     </td>
+  );
+}
+
+/** Riga secondaria dentro una cella: più piccola, attenuata. */
+export function Sotto({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <span className={`block text-xs font-normal text-[var(--inchiostro-muto)] ${className}`}>
+      {children}
+    </span>
   );
 }

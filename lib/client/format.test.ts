@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { euroInInput, formatPrezzoMot, numeroInInput, parseEuroInCentesimi, parseNumeroIT, parseQuantitaIT } from "./format";
+import { euroInInput, formatMeseIT, formatPrezzoMot, numeroInInput, parseEuroInCentesimi, parseNumeroIT, parseQuantitaIT } from "./format";
 
 describe("lettura degli importi scritti all'italiana", () => {
   it.each([
@@ -38,5 +38,18 @@ describe("formatPrezzoMot", () => {
     // Prezzo ufficiale dell'OAT Sep29 il 19/10/2026: a tre decimali è 96,130, cioè 96,13.
     expect(formatPrezzoMot(96.12994)).toBe("96,13");
     expect(formatPrezzoMot(96.0333333)).toBe("96,033");
+  });
+});
+
+describe("formatMeseIT", () => {
+  it("scrive il mese per esteso", () => {
+    expect(formatMeseIT("2026-09")).toBe("settembre 2026");
+    expect(formatMeseIT("2027-01")).toBe("gennaio 2027");
+    expect(formatMeseIT("2026-12")).toBe("dicembre 2026");
+  });
+
+  it("lascia com'è un mese che non riconosce", () => {
+    expect(formatMeseIT("2026-13")).toBe("2026-13");
+    expect(formatMeseIT("settembre")).toBe("settembre");
   });
 });

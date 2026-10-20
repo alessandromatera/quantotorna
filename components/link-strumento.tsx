@@ -25,12 +25,12 @@ export function LinkStrumento({
       target="_blank"
       rel="noopener noreferrer"
       title={`Apri la scheda su ${fonte} ↗`}
-      className={`text-[var(--serie-1)] underline decoration-[var(--serie-1)]/30 underline-offset-2 hover:decoration-[var(--serie-1)] ${className}`}
+      className={`text-[var(--inchiostro)] decoration-[var(--accento)] underline-offset-[3px] hover:text-[var(--accento)] hover:underline ${className}`}
     >
       {children}
-      <span aria-hidden className="ml-0.5 text-[0.85em]">
-        ↗
-      </span>
+      <svg viewBox="0 0 12 12" aria-hidden className="ml-1 inline-block h-2.5 w-2.5 align-baseline text-[var(--inchiostro-muto)]" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4.5 2.5h5v5M9.5 2.5 3 9" />
+      </svg>
     </a>
   );
 }

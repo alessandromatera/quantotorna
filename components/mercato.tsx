@@ -1,18 +1,19 @@
 "use client";
 
-import { CardCondizioni, useCondizioni } from "@/components/condizioni";
+import { PannelloCondizioni, riassuntoCondizioni, useCondizioni } from "@/components/condizioni";
 import { CurvaRendimenti, type PuntoCurva } from "@/components/grafici";
 import { LinkStrumento } from "@/components/link-strumento";
+import { MenuFiltro, NotaMenu, OpzioneFiltro } from "@/components/menu-filtro";
 import { SimulaAcquisto } from "@/components/simula-acquisto";
 import { Termine } from "@/components/termine";
 import {
   Avviso,
   Badge,
-  Bottone,
-  Card,
   Cella,
-  Chip,
+  Chevron,
   Riga,
+  Segmentato,
+  Sotto,
   Tabella,
   Vuoto,
   classeInput,
@@ -27,12 +28,13 @@ import {
   type RigaFlussiNoti,
 } from "@/lib/catalogo/metriche";
 import { TIPI_CATALOGO, type TipoCatalogo } from "@/lib/categorie";
-import { zainettoVivo } from "@/lib/client/condizioni";
+import { zainettoVivo, type Condizioni } from "@/lib/client/condizioni";
 import type { TariffaMercato } from "@/lib/costi/commissioni";
 import {
   formatDataIT,
   formatEuro,
   formatEuroSegno,
+  formatMeseIT,
   formatNumero,
   formatPct,
   formatPrezzo,
@@ -69,11 +71,17 @@ import {
 } from "@/lib/mercato/ordinamento";
 import { leggiPareggio } from "@/lib/mercato/pareggio";
 import { SOGLIE_SCAMBI, formatControvalore, formatFrequenza } from "@/lib/mercato/scambi";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 
 /** Colori di Italia ed estero nella curva: gli stessi slot in tutto il sito. */
 const COLORE_ITALIA = "var(--serie-1)";
 const COLORE_ESTERO = "var(--serie-5)";
+
+/** Le tre schede del listino: i tre modelli di titolo, che non si confrontano fra loro. */
+type Scheda = "fissi" | "variabili" | "indicizzati";
+
+/** Cosa mostra il dettaglio aperto sotto una riga. */
+type Vista = "acquisto" | "uscita";
 
 /**
  * Colonna «Scambi», uguale nelle tre tabelle: la seduta tipica e quante
@@ -85,16 +93,24 @@ function CellaScambi({ titolo: t }: { titolo: { scambi: Catalogo["titoli"][numbe
   if (t.scambi == null) {
     return (
       <Cella numerica>
-        <span className="text-xs text-[var(--inchiostro-muto)]">non letto</span>
+        <Sotto>non letto</Sotto>
       </Cella>
     );
   }
   return (
     <Cella numerica>
       {t.scambi.attive === 0 ? "nessuno" : formatControvalore(t.scambi.mediana)}
-      <span className="block text-xs font-normal text-[var(--inchiostro-muto)]">
-        {formatFrequenza(t.scambi)}
-      </span>
+      <Sotto>{formatFrequenza(t.scambi)}</Sotto>
+    </Cella>
+  );
+}
+
+/** Data di scadenza e quanto manca: la stessa cella nelle tre tabelle. */
+function CellaScadenza({ data, anni }: { data: string; anni: number | null }) {
+  return (
+    <Cella>
+      <span className="cifre-tabellari">{formatDataIT(data)}</span>
+      {anni != null && <Sotto>tra {formatNumero(anni, 1)} anni</Sotto>}
     </Cella>
   );
 }
@@ -115,27 +131,18 @@ function IntestazioneAnno({
 }) {
   const rendimenti = titoli.map((t) => t.ytmNettoPct).filter((y): y is number => y != null);
   return (
-    <tr className="border-b border-[var(--griglia)] bg-[var(--sfondo)]">
-      <td
-        colSpan={colonne}
-        className="py-1.5 pr-3 text-xs font-semibold uppercase tracking-wide text-[var(--inchiostro-2)]"
-      >
-        {anno}
-        <span className="ml-2 font-normal normal-case tracking-normal text-[var(--inchiostro-muto)]">
-          {titoli.length} {titoli.length === 1 ? "titolo" : "titoli"}
-          {rendimenti.length > 0 && ` · YTM netto fino al ${formatPct(Math.max(...rendimenti))}`}
+    <tr className="border-b border-[var(--bordo)] bg-[var(--superficie-2)]">
+      <td colSpan={colonne} className="py-1.5! pr-4 pl-4">
+        {/* Ferma a sinistra: sul telefono la tabella scorre, l'anno no. */}
+        <span className="sticky left-4 inline-flex flex-wrap items-baseline gap-x-3">
+          <span className="cifre-tabellari text-sm font-semibold">Scadenza {anno}</span>
+          <span className="text-xs text-[var(--inchiostro-muto)]">
+            {titoli.length} {titoli.length === 1 ? "titolo" : "titoli"}
+            {rendimenti.length > 0 && ` · YTM netto fino al ${formatPct(Math.max(...rendimenti))}`}
+          </span>
         </span>
       </td>
     </tr>
-  );
-}
-
-/** ▾/▴ accanto al nome: la riga si apre. */
-function Freccia({ aperta }: { aperta: boolean }) {
-  return (
-    <span className="ml-1 text-xs text-[var(--inchiostro-muto)]" aria-hidden>
-      {aperta ? "▴" : "▾"}
-    </span>
   );
 }
 
@@ -145,7 +152,7 @@ const COLONNA_SCAMBI: Colonna = {
   intestazione: (
     <>
       <Termine chiave="scambi">Scambi</Termine>
-      <span className="block font-normal normal-case tracking-normal">mediana a seduta, 3 mesi</span>
+      <span className="block whitespace-normal font-normal normal-case tracking-normal">mediana a seduta, 3 mesi</span>
     </>
   ),
   numerica: true,
@@ -157,7 +164,7 @@ const COLONNA_SCAMBI: Colonna = {
  */
 function colonne(nominale: number): Colonna[] {
   const su = (
-    <span className="block font-normal normal-case tracking-normal">
+    <span className="block whitespace-normal font-normal normal-case tracking-normal">
       su {formatNumero(nominale)} nom.
     </span>
   );
@@ -198,6 +205,7 @@ function colonne(nominale: number): Colonna[] {
       ordina: "YTM netto",
       intestazione: <Termine chiave="ytmNetto">YTM netto</Termine>,
       numerica: true,
+      evidenza: true,
     },
     // Lo stesso rendimento in euro, ma su 10.000 € spesi e non sui nominali:
     // è la cifra da confrontare quando si decide dove mettere una somma, e a
@@ -208,7 +216,7 @@ function colonne(nominale: number): Colonna[] {
       intestazione: (
         <>
           <Termine chiave="nettoAScadenza">Netto a scadenza</Termine>
-          <span className="block font-normal normal-case tracking-normal">ogni 10.000 € spesi</span>
+          <span className="block whitespace-normal font-normal normal-case tracking-normal">ogni 10.000 € spesi</span>
         </>
       ),
       numerica: true,
@@ -224,7 +232,6 @@ function colonne(nominale: number): Colonna[] {
     // Accanto alla duration perché risponde alla stessa domanda dal lato del
     // mercato: quanto è facile trovare chi compra a un prezzo vicino.
     { ...COLONNA_SCAMBI, ordina: "scambi" },
-    { chiave: "azioni", intestazione: "" },
   ];
 }
 
@@ -237,6 +244,7 @@ const COLONNE_INDICIZZATI: Colonna[] = [
     chiave: "reale",
     intestazione: <Termine chiave="rendimentoReale">Rend. reale lordo</Termine>,
     numerica: true,
+    evidenza: true,
   },
   { chiave: "confronto", intestazione: "BTP fisso confrontabile" },
   {
@@ -257,15 +265,12 @@ const COLONNE_VARIABILI: Colonna[] = [
     chiave: "ytm",
     intestazione: <Termine chiave="ytmNetto">YTM netto</Termine>,
     numerica: true,
+    evidenza: true,
   },
   COLONNA_SCAMBI,
 ];
 
-/**
- * Casella di un anno di scadenza. Compatta e in linea con i chip della
- * fascia, perché è la stessa domanda posta in modo più preciso: l'etichetta
- * per gli screen reader sta in `aria-label`.
- */
+/** Casella di un anno di scadenza, dentro il menu «Scadenza». */
 function AnnoScadenza({
   etichetta,
   valore,
@@ -289,7 +294,7 @@ function AnnoScadenza({
       max={intervallo?.max}
       placeholder={segnaposto == null ? "" : String(segnaposto)}
       onChange={(e) => onCambia(e.target.value === "" ? null : Number(e.target.value))}
-      className="w-[4.5rem] rounded-lg border border-[var(--bordo)] bg-[var(--sfondo)] px-2 py-1 text-xs outline-none focus:border-[var(--serie-1)]"
+      className="h-8 w-20 rounded-md border border-[var(--bordo)] bg-[var(--superficie)] px-2 text-base outline-none focus:border-[var(--accento)] sm:text-sm"
     />
   );
 }
@@ -319,74 +324,96 @@ function CellaCedola({
   return (
     <Cella numerica>
       {formatPct(t.cedolaAnnua)}
-      <span className="block text-xs font-normal text-[var(--inchiostro-muto)]">
+      <Sotto>
         {t.cedolaAnnua === 0
           ? "zero coupon"
           : `${CADENZA[t.frequenzaCedola] ?? `${t.frequenzaCedola} l'anno`} · ${formatEuro(
               Math.round((nominale * t.cedolaAnnua) / t.frequenzaCedola),
             )}`}
-      </span>
+      </Sotto>
       {prossimi.length > 0 && (
-        <span className="block text-xs font-normal text-[var(--inchiostro-muto)]">
+        <Sotto>
           poi {prossimi.map((g) => `${formatPct(g.cedolaAnnua)} dal ${formatDataIT(g.dal)}`).join(", ")}
-        </span>
+        </Sotto>
       )}
     </Cella>
   );
 }
 
-/** Badge dell'emittente e della famiglia, ISIN, e la riga che spiega cosa comporta. */
-function Identita({
-  tipo,
-  emittente,
-  prezzo,
-  isin,
-  nome,
-  plusCompensabile,
+/**
+ * La prima cella di ogni riga: il nome (link alla scheda di Borsa
+ * Italiana), poi ISIN, emittente col rating e famiglia. Con `conNota` anche
+ * la riga che spiega cosa comporta il titolo a scadenza; nella tabella dei
+ * fissi la nota sta nel dettaglio che si apre col clic, perché ripetuta su
+ * seicento righe le renderebbe alte cinque volte.
+ */
+function CellaTitolo({
+  titolo: t,
+  aperta,
+  conNota = false,
 }: {
-  tipo: TipoCatalogo;
-  emittente: Emittente;
-  prezzo: number;
-  isin: string;
-  nome: string;
-  plusCompensabile?: boolean;
+  titolo: {
+    tipo: TipoCatalogo;
+    emittente: Emittente;
+    prezzo: number;
+    isin: string;
+    nome: string;
+    plusCompensabile?: boolean;
+  };
+  /** Riga che si apre: la freccia a sinistra dice se è aperta. */
+  aperta?: boolean;
+  conNota?: boolean;
 }) {
-  const d = descriviTitolo({ tipo, prezzo, plusCompensabile, emittente, nome });
-  const e = DESCRIZIONI[emittente];
+  const d = descriviTitolo(t);
+  const e = DESCRIZIONI[t.emittente];
   return (
-    <>
-      <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-[var(--inchiostro-muto)]">
-        {/* Emittente e rating prima della famiglia, e SEMPRE, anche
-            sull'Italia: su un listino che mescola Italia e Germania è la
-            prima cosa da sapere, perché spiega perché due titoli di pari
-            scadenza rendono diverso. La data di rilevazione del rating sta
-            nel `title`: è un dato per riga, perché i rating non sono stati
-            rilevati tutti lo stesso giorno. */}
-        <Badge>
-          <span
-            title={
-              e.ratingRilevato
-                ? `Rating ${RATING_FONTE}, rilevato a mano il ${formatDataIT(e.ratingRilevato)}. Va riverificato sul sito dell'agenzia.`
-                : undefined
-            }
-          >
-            <Termine chiave="rating">
-              {e.breve}{" "}
-              {/* Dove il rating manca si scrive che manca: un posto vuoto lo
-                  farebbe sembrare un dettaglio. */}
-              {e.rating ?? "rating n.d."}
-            </Termine>
+    <Cella ferma className="min-w-[12rem] sm:min-w-[17rem]">
+      <div className="flex items-start gap-1.5">
+        {aperta != null && (
+          <Chevron
+            className={`mt-0.5 -ml-1 ${aperta ? "rotate-90 text-[var(--accento)]" : "text-[var(--inchiostro-muto)]"}`}
+          />
+        )}
+        <div className="min-w-0">
+          <LinkStrumento isin={t.isin} tipo={t.tipo} emittente={t.emittente} className="font-semibold">
+            {t.nome}
+          </LinkStrumento>
+          <span className="mt-1 flex flex-wrap items-center gap-1.5">
+            {/* Emittente e rating prima della famiglia, e SEMPRE, anche
+                sull'Italia: su un listino che mescola Italia e Germania è la
+                prima cosa da sapere, perché spiega perché due titoli di pari
+                scadenza rendono diverso. La data di rilevazione del rating sta
+                nel `title`: è un dato per riga, perché i rating non sono stati
+                rilevati tutti lo stesso giorno. */}
+            <Badge>
+              <span
+                title={
+                  e.ratingRilevato
+                    ? `Rating ${RATING_FONTE}, rilevato a mano il ${formatDataIT(e.ratingRilevato)}. Va riverificato sul sito dell'agenzia.`
+                    : undefined
+                }
+              >
+                <Termine chiave="rating">
+                  {e.breve}{" "}
+                  {/* Dove il rating manca si scrive che manca: un posto vuoto lo
+                      farebbe sembrare un dettaglio. */}
+                  {e.rating ?? "rating n.d."}
+                </Termine>
+              </span>
+            </Badge>
+            <Badge tono={d.toccaZainetto ? "neutro" : "avviso"}>
+              <Termine chiave={d.termine}>{d.famiglia}</Termine>
+            </Badge>
           </span>
-        </Badge>
-        <Badge tono={d.toccaZainetto ? "neutro" : "avviso"}>
-          <Termine chiave={d.termine}>{d.famiglia}</Termine>
-        </Badge>
-        {isin}
-      </span>
-      <span className="mt-0.5 block max-w-md text-xs leading-snug text-[var(--inchiostro-muto)]">
-        {d.nota}
-      </span>
-    </>
+          <span className="mt-1 block font-mono text-xs text-[var(--inchiostro-muto)]">{t.isin}</span>
+          {conNota && (
+            <span className="mt-1 block max-w-sm text-xs leading-snug text-[var(--inchiostro-muto)]">
+              {d.nota}
+            </span>
+          )}
+        </div>
+      </div>
+    </Cella>
   );
 }
 
@@ -395,7 +422,8 @@ function Scartate({ scartate }: { scartate: Catalogo["rapporto"]["scartate"] }) 
   const { gruppi, altre } = useMemo(() => raggruppaScartate(scartate), [scartate]);
   return (
     <details className="text-xs text-[var(--inchiostro-muto)]">
-      <summary className="cursor-pointer">
+      <summary className="flex cursor-pointer items-center gap-1.5 hover:text-[var(--inchiostro)]">
+        <Chevron className="ruota-aperto" />
         {formatNumero(scartate.length)} righe dei listini lasciate fuori, col motivo
       </summary>
       <ul className="mt-2 list-disc space-y-0.5 pl-5">
@@ -411,7 +439,7 @@ function Scartate({ scartate }: { scartate: Catalogo["rapporto"]["scartate"] }) 
           <ul className="mt-1 space-y-0.5">
             {altre.map((s, i) => (
               <li key={`${s.isin}-${i}`}>
-                <span className="cifre-tabellari">{s.isin}</span>: {s.motivo}
+                <span className="font-mono">{s.isin}</span>: {s.motivo}
               </li>
             ))}
           </ul>
@@ -443,6 +471,87 @@ function Uscita({
   return <CalcolatoreUscita bond={bond} contesto={contesto} tariffa={tariffa} />;
 }
 
+/**
+ * Il dettaglio sotto una riga dei fissi: cosa comporta il titolo, poi le due
+ * domande che la tabella non risolve — quanto spendo e quanto torna col mio
+ * nominale e le mie commissioni, e cosa resta uscendo prima.
+ */
+function Dettaglio({
+  titolo: t,
+  vista,
+  onVista,
+  onChiudi,
+  oggi,
+  condizioni,
+  contesto,
+}: {
+  titolo: RigaFlussiNoti;
+  vista: Vista;
+  onVista: (v: Vista) => void;
+  onChiudi: () => void;
+  oggi: string;
+  condizioni: Condizioni;
+  contesto: ContestoFiscale;
+}) {
+  const d = descriviTitolo(t);
+  return (
+    <div className="dettaglio-riga px-4 pt-2 pb-5">
+      <div className="flex items-end justify-between gap-3 border-b border-[var(--bordo)]">
+        <Segmentato
+          contenitore
+          etichetta={`Simulazioni su ${t.nome}`}
+          voci={[
+            { valore: "acquisto", nome: "Se lo compro" },
+            { valore: "uscita", nome: "Se esco prima" },
+          ]}
+          valore={vista}
+          onCambia={onVista}
+        />
+        <button
+          type="button"
+          onClick={onChiudi}
+          className="mb-1.5 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[var(--inchiostro-muto)] hover:bg-[var(--griglia)] hover:text-[var(--inchiostro)]"
+        >
+          <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+            <path d="m4 4 8 8M12 4l-8 8" />
+          </svg>
+          Chiudi
+        </button>
+      </div>
+      <p className="mt-3 mb-4 max-w-4xl text-sm text-[var(--inchiostro-2)]">
+        <strong className="text-[var(--inchiostro)]">{d.famiglia}.</strong> {d.nota}
+      </p>
+      {vista === "acquisto" ? (
+        <SimulaAcquisto
+          titolo={t}
+          oggi={oggi}
+          nominaleDiPartenza={condizioni.nominale}
+          tariffa={condizioni.tariffa}
+          ytmTabella={t.ytmNettoPct}
+        />
+      ) : (
+        <Uscita
+          titolo={t}
+          oggi={oggi}
+          nominale={condizioni.nominale}
+          contesto={contesto}
+          tariffa={condizioni.tariffa}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Spiegazione in testa a una scheda: cosa contiene e come si legge. */
+function Introduzione({ children, azioni }: { children: ReactNode; azioni?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 border-b border-[var(--bordo)] px-4 py-3">
+      <p className="max-w-3xl text-sm text-[var(--inchiostro-2)]">{children}</p>
+      {azioni}
+    </div>
+  );
+}
+
 export function Mercato({
   metriche,
   euribor6m,
@@ -454,15 +563,16 @@ export function Mercato({
 }) {
   const oggi = metriche.data;
   const [condizioni, setCondizioni] = useCondizioni();
+  const [condizioniAperte, setCondizioniAperte] = useState(false);
+  const [scheda, setScheda] = useState<Scheda>("fissi");
   const [ordinamento, setOrdinamento] = useState<Ordinamento>(ORDINAMENTO_PREDEFINITO);
   /** Un gruppo per anno di scadenza: la domanda della scaletta, il migliore di ogni anno. */
   const [perAnno, setPerAnno] = useState(true);
   const [filtri, setFiltri] = useState<Filtri>(FILTRI_VUOTI);
-  /** ISIN con la simulazione d'acquisto aperta (clic sulla riga): uno per volta. */
-  const [acquisto, setAcquisto] = useState<string | null>(null);
-  /** ISIN con il calcolatore di uscita aperto: uno per volta, sotto la riga. */
-  const [uscita, setUscita] = useState<string | null>(null);
-  const cambiaAcquisto = (isin: string) => setAcquisto((c) => (c === isin ? null : isin));
+  /** Il titolo col dettaglio aperto (clic sulla riga): uno per volta. */
+  const [aperta, setAperta] = useState<{ isin: string; vista: Vista } | null>(null);
+  const cambiaAperta = (isin: string) =>
+    setAperta((a) => (a?.isin === isin ? null : { isin, vista: "acquisto" }));
   const nominale = 10_000;
 
   /**
@@ -513,8 +623,10 @@ export function Mercato({
   }, [tutte]);
   /**
    * Gli emittenti da mostrare come filtro: quelli presenti nel catalogo, più
-   * quelli già selezionati (togliere sotto i piedi il chip appena premuto
-   * sarebbe un modo strano di rispondere).
+   * quelli già selezionati (togliere sotto i piedi la voce appena scelta
+   * sarebbe un modo strano di rispondere). La tabella ne conosce più di
+   * trenta, perché il giorno in cui il MOT ne quota uno nuovo la riga non
+   * venga scartata, ma voci spente a decine non sarebbero un filtro.
    */
   const emittentiPresenti = useMemo(
     () => EMITTENTI.filter((e) => (conteggi.emittente.get(e) ?? 0) > 0 || filtri.emittenti.includes(e)),
@@ -604,7 +716,7 @@ export function Mercato({
   const colonneFlussi = colonne(nominale);
 
   return (
-    <div className="space-y-4">
+    <div className="contenitore space-y-4 pt-6">
       {(rapporto.fontiMancanti.length > 0 ||
         metriche.senzaEmissione > 0 ||
         scambiAssenti.nonLetti > 0) && (
@@ -632,31 +744,39 @@ export function Mercato({
         </div>
       )}
 
-      <CardCondizioni condizioni={condizioni} onCambia={setCondizioni} oggi={oggi} />
-
-      <Card titolo="Filtri">
-        {/* La ricerca libera sta in cima e da sola: è l'unico filtro che non
-            riguarda una proprietà del titolo ma il suo nome. */}
-        <div className="space-y-3">
-          <label className="block">
-            <span className="mb-1 block text-xs uppercase tracking-wide text-[var(--inchiostro-muto)]">
-              Cerca
-            </span>
+      <section
+        aria-label="Listino"
+        className="rounded-lg border border-[var(--bordo)] bg-[var(--superficie)]"
+      >
+        {/* La barra dei filtri. Valgono per tutte e tre le schede: il
+            conteggio accanto a ogni scheda dice quanti titoli restano lì. */}
+        <div className="relative flex flex-wrap items-center gap-2 border-b border-[var(--bordo)] px-4 py-3">
+          <label className="relative block w-full sm:w-64">
+            <span className="sr-only">Cerca per nome o ISIN</span>
+            <svg
+              viewBox="0 0 20 20"
+              className="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-[var(--inchiostro-muto)]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              aria-hidden
+            >
+              <circle cx="8.5" cy="8.5" r="5.5" />
+              <path d="m13 13 4 4" />
+            </svg>
             <input
               type="search"
               value={filtri.testo}
               onChange={(e) => setFiltri((f) => ({ ...f, testo: e.target.value }))}
-              placeholder="nome o ISIN"
-              className={`${classeInput} max-w-xs`}
+              placeholder="Cerca per nome o ISIN"
+              className={`${classeInput} pl-8`}
             />
           </label>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-xs uppercase tracking-wide text-[var(--inchiostro-muto)]">
-              Famiglia
-            </span>
+          <MenuFiltro etichetta="Famiglia" attivi={filtri.famiglie.length}>
             {TIPI_CATALOGO.map((t) => (
-              <Chip
+              <OpzioneFiltro
                 key={t}
                 etichetta={descriviTitolo({ tipo: t, prezzo: 100 }).famiglia}
                 attivo={filtri.famiglie.includes(t)}
@@ -664,38 +784,17 @@ export function Mercato({
                 onCambia={() => cambiaFamiglia(t)}
               />
             ))}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-xs uppercase tracking-wide text-[var(--inchiostro-muto)]">
-              Emittente
-            </span>
-            {/* Solo gli emittenti che il catalogo contiene davvero: la tabella
-                ne conosce più di trenta, perché il giorno in cui il MOT ne
-                quota uno nuovo la riga non venga scartata, ma caselle spente
-                a decine non sarebbero un filtro. */}
-            {emittentiPresenti.map((e) => (
-              <Chip
-                key={e}
-                etichetta={DESCRIZIONI[e].breve}
-                attivo={filtri.emittenti.includes(e)}
-                conteggio={conteggi.emittente.get(e) ?? 0}
-                onCambia={() => cambiaEmittente(e)}
-              />
-            ))}
-          </div>
+          </MenuFiltro>
 
           {/* Scadenza: le fasce e gli anni precisi sono due modi di dire la
-              stessa cosa, quindi stanno insieme. */}
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2">
-            <span className="mr-1 text-xs uppercase tracking-wide text-[var(--inchiostro-muto)]">
-              Scadenza
-            </span>
+              stessa cosa, quindi stanno nello stesso menu. */}
+          <MenuFiltro etichetta="Scadenza" attivi={filtri.annoMin != null || filtri.annoMax != null ? 1 : 0}>
             {ORIZZONTI.map((o) => {
               const e = estremiOrizzonte(o, annoCorrente);
               return (
-                <Chip
+                <OpzioneFiltro
                   key={o.chiave}
+                  unica
                   etichetta={o.nome}
                   attivo={orizzonte === o.chiave}
                   conteggio={filtra(tutte, { ...FILTRI_VUOTI, annoMin: e.annoMin, annoMax: e.annoMax }).length}
@@ -703,35 +802,54 @@ export function Mercato({
                 />
               );
             })}
-            <span className="mx-2 h-5 w-px shrink-0 bg-[var(--griglia)]" aria-hidden />
-            <span className="text-xs text-[var(--inchiostro-muto)]">o dagli anni</span>
-            <AnnoScadenza
-              etichetta="Anno di scadenza minimo"
-              valore={filtri.annoMin}
-              intervallo={anni}
-              segnaposto={anni?.min}
-              onCambia={(v) => setFiltri((f) => ({ ...f, annoMin: v }))}
-            />
-            <span className="text-xs text-[var(--inchiostro-muto)]">–</span>
-            <AnnoScadenza
-              etichetta="Anno di scadenza massimo"
-              valore={filtri.annoMax}
-              intervallo={anni}
-              segnaposto={anni?.max}
-              onCambia={(v) => setFiltri((f) => ({ ...f, annoMax: v }))}
-            />
-          </div>
+            <div className="mt-1.5 border-t border-[var(--griglia)] pt-1.5">
+              <NotaMenu>Oppure dagli anni di scadenza</NotaMenu>
+              <div className="flex items-center gap-2 px-2.5 pb-1.5">
+                <AnnoScadenza
+                  etichetta="Anno di scadenza minimo"
+                  valore={filtri.annoMin}
+                  intervallo={anni}
+                  segnaposto={anni?.min}
+                  onCambia={(v) => setFiltri((f) => ({ ...f, annoMin: v }))}
+                />
+                <span className="text-xs text-[var(--inchiostro-muto)]">–</span>
+                <AnnoScadenza
+                  etichetta="Anno di scadenza massimo"
+                  valore={filtri.annoMax}
+                  intervallo={anni}
+                  segnaposto={anni?.max}
+                  onCambia={(v) => setFiltri((f) => ({ ...f, annoMax: v }))}
+                />
+              </div>
+            </div>
+          </MenuFiltro>
+
+          <MenuFiltro etichetta="Emittente" attivi={filtri.emittenti.length} larghezza="sm:w-[28rem]">
+            <div className="grid sm:grid-cols-2">
+              {emittentiPresenti.map((e) => (
+                <OpzioneFiltro
+                  key={e}
+                  etichetta={DESCRIZIONI[e].breve}
+                  attivo={filtri.emittenti.includes(e)}
+                  conteggio={conteggi.emittente.get(e) ?? 0}
+                  onCambia={() => cambiaEmittente(e)}
+                />
+              ))}
+            </div>
+          </MenuFiltro>
 
           {/* La volatilità è la duration modificata, cioè quanto il prezzo si
               muove per un punto di tassi: «quanto posso farmi male se devo
               uscire prima». */}
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2">
-            <span className="mr-1 text-xs uppercase tracking-wide text-[var(--inchiostro-muto)]">
-              <Termine chiave="volatilita">Volatilità</Termine>
-            </span>
+          <MenuFiltro etichetta="Volatilità" attivi={filtri.volatilita != null ? 1 : 0}>
+            <NotaMenu>
+              <Termine chiave="volatilita">Duration modificata</Termine>: di quanto si muove il
+              prezzo se i tassi si spostano di un punto.
+            </NotaMenu>
             {FASCE_VOLATILITA.map((v) => (
-              <Chip
+              <OpzioneFiltro
                 key={v.chiave}
+                unica
                 etichetta={v.nome}
                 attivo={filtri.volatilita === v.chiave}
                 conteggio={filtra(tutte, { ...FILTRI_VUOTI, volatilita: v.chiave }).length}
@@ -740,17 +858,18 @@ export function Mercato({
                 }
               />
             ))}
-          </div>
+          </MenuFiltro>
 
           {/* Quanto deve scambiare almeno: solo soglie minime, perché nessuno
               cerca i titoli che non si riescono a rivendere. */}
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2">
-            <span className="mr-1 text-xs uppercase tracking-wide text-[var(--inchiostro-muto)]">
-              <Termine chiave="scambi">Scambi</Termine>
-            </span>
+          <MenuFiltro etichetta="Scambi" attivi={filtri.scambi != null ? 1 : 0}>
+            <NotaMenu>
+              <Termine chiave="scambi">Scambi</Termine>: mediana a seduta, ultimi 3 mesi.
+            </NotaMenu>
             {SOGLIE_SCAMBI.map((soglia) => (
-              <Chip
+              <OpzioneFiltro
                 key={soglia.chiave}
+                unica
                 etichetta={soglia.nome}
                 attivo={filtri.scambi === soglia.chiave}
                 conteggio={filtra(tutte, { ...FILTRI_VUOTI, scambi: soglia.chiave }).length}
@@ -759,428 +878,422 @@ export function Mercato({
                 }
               />
             ))}
-            <span className="text-xs text-[var(--inchiostro-muto)]">
-              di mediana a seduta, ultimi 3 mesi
-              {scambiAssenti.mai > 0 && ` · ${scambiAssenti.mai} titoli mai scambiati`}
-              {scambiAssenti.nonLetti > 0 && ` · ${scambiAssenti.nonLetti} non letti`}
-            </span>
-          </div>
+            {(scambiAssenti.mai > 0 || scambiAssenti.nonLetti > 0) && (
+              <NotaMenu>
+                Restano fuori comunque
+                {scambiAssenti.mai > 0 && ` ${scambiAssenti.mai} titoli mai scambiati`}
+                {scambiAssenti.mai > 0 && scambiAssenti.nonLetti > 0 && " e"}
+                {scambiAssenti.nonLetti > 0 && ` ${scambiAssenti.nonLetti} non letti`}.
+              </NotaMenu>
+            )}
+          </MenuFiltro>
 
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={filtri.soloCompensabili}
-                onChange={(e) => setFiltri((f) => ({ ...f, soloCompensabili: e.target.checked }))}
-                className="h-4 w-4 accent-[var(--serie-1)]"
-              />
-              <span>
-                Solo <Termine chiave="zainetto">compensabili con lo zainetto</Termine>
-              </span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={filtri.soloConRendimento}
-                onChange={(e) => setFiltri((f) => ({ ...f, soloConRendimento: e.target.checked }))}
-                className="h-4 w-4 accent-[var(--serie-1)]"
-              />
-              <span>Solo con rendimento calcolato</span>
-            </label>
-          </div>
+          <MenuFiltro
+            etichetta="Altro"
+            attivi={(filtri.soloCompensabili ? 1 : 0) + (filtri.soloConRendimento ? 1 : 0)}
+          >
+            <OpzioneFiltro
+              etichetta="Solo compensabili con lo zainetto"
+              attivo={filtri.soloCompensabili}
+              onCambia={() => setFiltri((f) => ({ ...f, soloCompensabili: !f.soloCompensabili }))}
+            />
+            <OpzioneFiltro
+              etichetta="Solo con rendimento calcolato"
+              attivo={filtri.soloConRendimento}
+              onCambia={() => setFiltri((f) => ({ ...f, soloConRendimento: !f.soloConRendimento }))}
+            />
+            <NotaMenu>
+              Compensabili: titoli la cui plusvalenza a rimborso assorbe le minusvalenze dello{" "}
+              <Termine chiave="zainetto">zainetto</Termine>.
+            </NotaMenu>
+          </MenuFiltro>
 
-          <p className="text-xs text-[var(--inchiostro-muto)]">
-            {mostrate === tutte.length
-              ? `${tutte.length} titoli in elenco.`
-              : `${mostrate} titoli su ${tutte.length}.`}{" "}
+          <p className="text-sm text-[var(--inchiostro-muto)] sm:ml-auto" aria-live="polite">
+            <strong className="cifre-tabellari font-semibold text-[var(--inchiostro)]">{mostrate}</strong>
+            {mostrate === tutte.length ? " titoli" : ` di ${tutte.length} titoli`}
             {filtriAttivi(filtri) && (
-              <button type="button" onClick={() => setFiltri(FILTRI_VUOTI)} className="font-medium underline">
-                Azzera i filtri
-              </button>
+              <>
+                {" · "}
+                <button
+                  type="button"
+                  onClick={() => setFiltri(FILTRI_VUOTI)}
+                  className="font-medium text-[var(--accento)] hover:underline"
+                >
+                  Azzera filtri
+                </button>
+              </>
             )}
           </p>
         </div>
-      </Card>
 
-      <Card
-        titolo="Curva dei rendimenti"
-        descrizione="Ogni punto è un titolo dei filtri attivi: quanto rende netto a scadenza (verticale) e fra quanti anni rimborsa (orizzontale). Si vede in un colpo dove allungare la scadenza viene pagato, e quanto stanno distanti Italia ed estero a parità di scadenza, che è lo spread di credito."
-      >
-        <CurvaRendimenti punti={curva} coloreItalia={COLORE_ITALIA} coloreEstero={COLORE_ESTERO} />
-      </Card>
-
-      <Card
-        titolo={`Tasso fisso, step-up, strip e BOT (metriche per ${formatNumero(nominale)} € nominali)`}
-        descrizione="Titoli i cui incassi sono certi già oggi. Ogni riga dice di che tipo è e cosa comporta a scadenza. Un clic sulla riga apre la simulazione d'acquisto col tuo nominale, il tuo prezzo e le tue commissioni; «Se esco prima» dice cosa resta in mano vendendo prima della scadenza."
-      >
-        {/* L'ordine si sceglie dalle frecce delle intestazioni; qui lo si dice
-            a parole, perché sul telefono le intestazioni scorrono fuori dallo
-            schermo. */}
-        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={perAnno}
-              onChange={(e) => setPerAnno(e.target.checked)}
-              className="h-4 w-4 accent-[var(--serie-1)]"
-            />
-            <span>Raggruppa per anno di scadenza</span>
-          </label>
-          <span className="text-xs text-[var(--inchiostro-muto)]">
-            Ordine{perAnno ? " dentro ogni anno" : ""}:{" "}
-            <strong className="text-[var(--inchiostro-2)]">{descriviOrdinamento(ordinamento)}</strong>; a
-            pari merito {descriviOrdinamento(spareggio(ordinamento.chiave))}. Si cambia con le frecce ↕
-            nelle intestazioni; un secondo clic inverte.
-          </span>
+        {/* Le schede, e a destra le condizioni delle simulazioni: chi le ha
+            cambiate le vede scritte senza aprire niente. */}
+        <div className="flex flex-wrap items-end justify-between gap-x-6 border-b border-[var(--bordo)] px-4 pt-3">
+          <Segmentato
+            contenitore
+            etichetta="Famiglie di titoli"
+            valore={scheda}
+            onCambia={(s) => {
+              setScheda(s);
+              setAperta(null);
+            }}
+            voci={[
+              { valore: "fissi", nome: "Tasso fisso, step-up, strip e BOT", conteggio: titoli.length },
+              { valore: "variabili", nome: "Tasso variabile (CCTeu)", conteggio: variabili.length },
+              { valore: "indicizzati", nome: "Indicizzati all'inflazione", conteggio: indicizzati.length },
+            ]}
+          />
+          <button
+            type="button"
+            aria-expanded={condizioniAperte}
+            onClick={() => setCondizioniAperte((v) => !v)}
+            className="-mx-2 mb-2 flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-[var(--superficie-2)] sm:mx-0 sm:w-auto"
+          >
+            <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-[var(--inchiostro-muto)]" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
+              <path d="M3 6h9M15 6h2M3 14h2M8 14h9" />
+              <circle cx="13.5" cy="6" r="1.75" />
+              <circle cx="6.5" cy="14" r="1.75" />
+            </svg>
+            <span className="whitespace-nowrap font-medium">Le tue condizioni</span>
+            <span className="min-w-0 flex-1 truncate text-[var(--inchiostro-muto)]">
+              {riassuntoCondizioni(condizioni, oggi)}
+            </span>
+            <Chevron className={`text-[var(--inchiostro-muto)] ${condizioniAperte ? "-rotate-90" : "rotate-90"}`} />
+          </button>
         </div>
 
-        <Tabella
-          colonne={colonneFlussi}
-          ordinamento={ordinamento}
-          onOrdina={(chiave) => setOrdinamento((o) => cambiaOrdinamento(o, chiave as ChiaveOrdinamento))}
-          vuoto={titoli.length === 0 ? "Nessun titolo con questi filtri." : undefined}
-          nota={
-            <>
-              YTM netto: imposte al 12,5% effettivo e prezzo di chiusura, commissioni escluse.
-              «Netto a scadenza» è lo stesso rendimento in euro, su 10.000 € spesi oggi invece che
-              sui nominali: premia anche il tempo, quindi fra scadenze diverse dice quanto ci si
-              ritrova, non quanto rende. «Plus a rimborso» <strong>non è un extra da sommare</strong>{" "}
-              allo YTM netto: ci è già dentro. È il differenziale certo fra prezzo e rimborso —
-              misurato dal prezzo teorico, perché il disaggio di emissione è tassato a parte — e
-              serve a decidere sullo zainetto. Positivo comprando sotto la pari: plusvalenza che
-              assorbe lo zainetto sui titoli con cedola e sui BOT coi dati d'asta, mentre sugli{" "}
-              <Termine chiave="btpStrip">strip</Termine> è tutto scarto di emissione e ne resta fuori
-              (segnalato riga per riga). Negativo sopra la pari: una minusvalenza certa che lo
-              zainetto lo alimenta. Il <Termine chiave="rating">rating</Termine> è
-              dell'emittente e non del singolo titolo, rilevato a mano ({RATING_FONTE}; il più
-              vecchio il <strong>{formatDataIT(RATING_RILEVATI)}</strong>): un declassamento non si
-              aggiorna da solo.
-            </>
-          }
-        >
-          {gruppi.map((g) => (
-            <Fragment key={g.anno ?? "tutti"}>
-              {g.anno != null && (
-                <IntestazioneAnno anno={g.anno} titoli={g.titoli} colonne={colonneFlussi.length} />
-              )}
-              {g.titoli.map((t) => (
-                <Fragment key={t.isin}>
-                  <Riga
-                    onClick={() => cambiaAcquisto(t.isin)}
-                    espansa={acquisto === t.isin}
-                    etichetta={`${acquisto === t.isin ? "Chiudi" : "Apri"} la simulazione d'acquisto di ${t.nome}`}
-                  >
-                    <Cella className="min-w-[13rem]">
-                      <LinkStrumento isin={t.isin} tipo={t.tipo} emittente={t.emittente} className="font-medium">
-                        {t.nome}
-                      </LinkStrumento>
-                      <Freccia aperta={acquisto === t.isin} />
-                      <Identita
-                        tipo={t.tipo}
-                        emittente={t.emittente}
-                        prezzo={t.prezzo}
-                        isin={t.isin}
-                        nome={t.nome}
-                        plusCompensabile={t.plusCompensabile}
-                      />
-                    </Cella>
-                    <Cella>
-                      <span className="cifre-tabellari">{formatDataIT(t.dataScadenza)}</span>
-                      {t.rendimento10k && (
-                        <span className="block text-xs text-[var(--inchiostro-muto)]">
-                          tra {formatNumero(t.rendimento10k.anni, 1)} anni
-                        </span>
-                      )}
-                    </Cella>
-                    <CellaCedola titolo={t} nominale={nominale} oggi={oggi} />
-                    <Cella numerica>{formatPrezzo(t.prezzo)}</Cella>
-                    {/* Nessun colore su questa cella: un differenziale negativo
-                        non è un titolo peggiore, è cedola alta pagata in
-                        anticipo, e lo YTM netto lo ha già assorbito. */}
-                    <Cella numerica>
-                      {t.plusRimborso10k === 0 ? "—" : formatEuroSegno(t.plusRimborso10k)}
-                      {t.plusRimborso10k !== 0 &&
-                        (!t.plusCompensabile ? (
-                          <span className="block text-xs font-normal text-[var(--inchiostro-muto)]">
-                            fuori dallo zainetto
+        {condizioniAperte && (
+          <div className="border-b border-[var(--bordo)] bg-[var(--superficie-2)] px-4 py-5">
+            <PannelloCondizioni condizioni={condizioni} onCambia={setCondizioni} oggi={oggi} />
+          </div>
+        )}
+
+        {scheda === "fissi" && (
+          <div role="tabpanel" aria-label="Tasso fisso, step-up, strip e BOT">
+            <Introduzione
+              azioni={
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={perAnno}
+                    onChange={(e) => setPerAnno(e.target.checked)}
+                    className="h-4 w-4 accent-[var(--accento-pieno)]"
+                  />
+                  Raggruppa per anno di scadenza
+                </label>
+              }
+            >
+              Titoli i cui incassi sono certi già oggi, con le metriche su{" "}
+              {formatNumero(nominale)} € nominali. Un clic sulla riga apre il conto d'acquisto col
+              tuo nominale, il tuo prezzo e le tue commissioni, e «Se esco prima»: cosa resta in
+              mano vendendo prima della scadenza.{" "}
+              {/* L'ordine si sceglie dalle frecce delle intestazioni; qui lo si
+                  dice a parole, perché sul telefono le intestazioni scorrono
+                  fuori dallo schermo. */}
+              <span className="text-[var(--inchiostro-muto)]">
+                Ordine{perAnno ? " dentro ogni anno" : ""}: {descriviOrdinamento(ordinamento)}; a
+                pari merito {descriviOrdinamento(spareggio(ordinamento.chiave))}.
+              </span>
+            </Introduzione>
+
+            <details open className="group border-b border-[var(--bordo)]">
+              <summary className="flex cursor-pointer items-center gap-2 px-4 py-2.5 text-sm font-medium hover:bg-[var(--superficie-2)]">
+                <Chevron className="ruota-aperto text-[var(--inchiostro-muto)]" />
+                <span>
+                  Curva dei rendimenti netti{" "}
+                  <span className="font-normal text-[var(--inchiostro-muto)]">
+                    · {curva.length} titoli dei filtri attivi
+                  </span>
+                </span>
+              </summary>
+              <div className="px-4 pb-4">
+                <p className="mb-3 max-w-4xl text-xs text-[var(--inchiostro-muto)]">
+                  Ogni punto è un titolo: quanto rende netto a scadenza (verticale) e fra quanti
+                  anni rimborsa (orizzontale). Si vede in un colpo dove allungare la scadenza viene
+                  pagato, e quanto stanno distanti Italia ed estero a parità di scadenza, che è lo
+                  spread di credito.
+                </p>
+                <CurvaRendimenti punti={curva} coloreItalia={COLORE_ITALIA} coloreEstero={COLORE_ESTERO} />
+              </div>
+            </details>
+
+            <Tabella
+              colonne={colonneFlussi}
+              ordinamento={ordinamento}
+              onOrdina={(chiave) => setOrdinamento((o) => cambiaOrdinamento(o, chiave as ChiaveOrdinamento))}
+              vuoto={titoli.length === 0 ? "Nessun titolo con questi filtri." : undefined}
+              nota={
+                <>
+                  {metriche.nascostiYtmNegativo > 0 && (
+                    <>
+                      Non sono in elenco {metriche.nascostiYtmNegativo} titoli che a scadenza
+                      restituiscono meno di quanto costano oggi, imposte comprese.{" "}
+                    </>
+                  )}
+                  YTM netto: imposte al 12,5% effettivo e prezzo di chiusura, commissioni escluse.
+                  «Netto a scadenza» è lo stesso rendimento in euro, su 10.000 € spesi oggi invece
+                  che sui nominali: premia anche il tempo, quindi fra scadenze diverse dice quanto
+                  ci si ritrova, non quanto rende. «Plus a rimborso» <strong>non è un extra da
+                  sommare</strong> allo YTM netto: ci è già dentro. È il differenziale certo fra
+                  prezzo e rimborso — misurato dal prezzo teorico, perché il disaggio di emissione
+                  è tassato a parte — e serve a decidere sullo zainetto. Positivo comprando sotto
+                  la pari: plusvalenza che assorbe lo zainetto sui titoli con cedola e sui BOT coi
+                  dati d'asta, mentre sugli <Termine chiave="btpStrip">strip</Termine> è tutto
+                  scarto di emissione e ne resta fuori (segnalato riga per riga). Negativo sopra la
+                  pari: una minusvalenza certa che lo zainetto lo alimenta. Il{" "}
+                  <Termine chiave="rating">rating</Termine> è dell'emittente e non del singolo
+                  titolo, rilevato a mano ({RATING_FONTE}; il più vecchio il{" "}
+                  <strong>{formatDataIT(RATING_RILEVATI)}</strong>): un declassamento non si
+                  aggiorna da solo.
+                </>
+              }
+            >
+              {gruppi.map((g) => (
+                <Fragment key={g.anno ?? "tutti"}>
+                  {g.anno != null && (
+                    <IntestazioneAnno anno={g.anno} titoli={g.titoli} colonne={colonneFlussi.length} />
+                  )}
+                  {g.titoli.map((t) => (
+                    <Fragment key={t.isin}>
+                      <Riga
+                        onClick={() => cambiaAperta(t.isin)}
+                        espansa={aperta?.isin === t.isin}
+                        etichetta={`${aperta?.isin === t.isin ? "Chiudi" : "Apri"} le simulazioni di ${t.nome}`}
+                      >
+                        <CellaTitolo titolo={t} aperta={aperta?.isin === t.isin} />
+                        <CellaScadenza data={t.dataScadenza} anni={t.rendimento10k?.anni ?? null} />
+                        <CellaCedola titolo={t} nominale={nominale} oggi={oggi} />
+                        <Cella numerica>{formatPrezzo(t.prezzo)}</Cella>
+                        {/* Nessun colore su questa cella: un differenziale negativo
+                            non è un titolo peggiore, è cedola alta pagata in
+                            anticipo, e lo YTM netto lo ha già assorbito. */}
+                        <Cella numerica>
+                          {t.plusRimborso10k === 0 ? "—" : formatEuroSegno(t.plusRimborso10k)}
+                          {t.plusRimborso10k !== 0 &&
+                            (!t.plusCompensabile ? (
+                              <Sotto>fuori dallo zainetto</Sotto>
+                            ) : (
+                              t.plusRimborso10k < 0 && <Sotto>minus: alimenta lo zainetto</Sotto>
+                            ))}
+                        </Cella>
+                        <Cella numerica evidenza>
+                          <span className="text-[0.9375rem] font-semibold">
+                            {t.ytmNettoPct == null ? "—" : formatPct(t.ytmNettoPct)}
                           </span>
-                        ) : (
-                          t.plusRimborso10k < 0 && (
-                            <span className="block text-xs font-normal text-[var(--inchiostro-muto)]">
-                              minus: alimenta lo zainetto
-                            </span>
-                          )
-                        ))}
-                    </Cella>
-                    <Cella numerica forte>
-                      {t.ytmNettoPct == null ? "—" : formatPct(t.ytmNettoPct)}
-                      {t.ytmLordoPct != null && (
-                        <span className="block text-xs font-normal text-[var(--inchiostro-muto)]">
-                          lordo {formatPct(t.ytmLordoPct)}
-                          {t.ytmNettoSenzaCgPct != null && t.ytmNettoSenzaCgPct !== t.ytmNettoPct && (
+                          {t.ytmLordoPct != null && (
+                            <Sotto className="whitespace-nowrap">lordo {formatPct(t.ytmLordoPct)}</Sotto>
+                          )}
+                          {t.ytmLordoPct != null &&
+                            t.ytmNettoSenzaCgPct != null &&
+                            t.ytmNettoSenzaCgPct !== t.ytmNettoPct && (
+                              <Sotto className="whitespace-nowrap">
+                                <Termine chiave="ytmNettoSenzaCg">senza CG</Termine>{" "}
+                                {formatPct(t.ytmNettoSenzaCgPct)}
+                              </Sotto>
+                            )}
+                        </Cella>
+                        <Cella numerica>
+                          {t.netto10kInvestiti == null ? (
+                            "—"
+                          ) : (
                             <>
-                              {" "}
-                              · <Termine chiave="ytmNettoSenzaCg">senza CG</Termine>{" "}
-                              {formatPct(t.ytmNettoSenzaCgPct)}
+                              {formatEuro(t.netto10kInvestiti.incassi)}
+                              <span className="block text-xs font-medium text-[var(--delta-buono)]">
+                                {formatEuroSegno(t.netto10kInvestiti.guadagno)}
+                              </span>
+                              {/* Sotto l'anno l'annualizzazione di un guadagno di
+                                  pochi giorni sarebbe fuorviante: solo il totale. */}
+                              {t.rendimento10k && t.rendimento10k.anni >= 1 && (
+                                <Sotto>{formatEuroSegno(t.netto10kInvestiti.guadagnoAnnuo)}/anno</Sotto>
+                              )}
                             </>
                           )}
-                        </span>
+                        </Cella>
+                        <Cella numerica>
+                          {t.durationModificata == null ? "—" : formatPrezzo(t.durationModificata)}
+                        </Cella>
+                        <CellaScambi titolo={t} />
+                      </Riga>
+                      {aperta?.isin === t.isin && (
+                        <tr className="border-b border-[var(--bordo)]">
+                          <td
+                            colSpan={colonneFlussi.length}
+                            className="border-l-2 border-[var(--accento-pieno)] bg-[var(--superficie-2)] p-0!"
+                          >
+                            <Dettaglio
+                              titolo={t}
+                              vista={aperta.vista}
+                              onVista={(vista) => setAperta({ isin: t.isin, vista })}
+                              onChiudi={() => setAperta(null)}
+                              oggi={oggi}
+                              condizioni={condizioni}
+                              contesto={contesto}
+                            />
+                          </td>
+                        </tr>
                       )}
-                    </Cella>
-                    <Cella numerica>
-                      {t.netto10kInvestiti == null ? (
-                        "—"
-                      ) : (
-                        <>
-                          {formatEuro(t.netto10kInvestiti.incassi)}
-                          <span className="block text-xs font-normal text-[var(--delta-buono)]">
-                            {formatEuroSegno(t.netto10kInvestiti.guadagno)}
-                          </span>
-                          {/* Sotto l'anno l'annualizzazione di un guadagno di
-                              pochi giorni sarebbe fuorviante: solo il totale. */}
-                          {t.rendimento10k && t.rendimento10k.anni >= 1 && (
-                            <span className="block text-xs font-normal text-[var(--inchiostro-muto)]">
-                              {formatEuroSegno(t.netto10kInvestiti.guadagnoAnnuo)}/anno
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </Cella>
-                    <Cella numerica>
-                      {t.durationModificata == null ? "—" : formatPrezzo(t.durationModificata)}
-                    </Cella>
-                    <CellaScambi titolo={t} />
-                    <Cella className="text-right">
-                      {/* Le colonne dicono quanto rende tenendolo fino in fondo.
-                          Questo apre l'altra domanda — cosa resta in mano
-                          uscendo prima — che su una scadenza lunga è quella
-                          che decide davvero. */}
-                      <Bottone
-                        tipo="secondario"
-                        aria-expanded={uscita === t.isin}
-                        onClick={() => setUscita((c) => (c === t.isin ? null : t.isin))}
-                      >
-                        {uscita === t.isin ? "Chiudi" : "Se esco prima"}
-                      </Bottone>
-                    </Cella>
-                  </Riga>
-                  {acquisto === t.isin && (
-                    <tr className="border-b border-[var(--griglia)]">
-                      <td colSpan={colonneFlussi.length} className="pb-4 pr-3">
-                        <SimulaAcquisto
-                          titolo={t}
-                          oggi={oggi}
-                          nominaleDiPartenza={condizioni.nominale}
-                          tariffa={condizioni.tariffa}
-                          ytmTabella={t.ytmNettoPct}
-                        />
-                      </td>
-                    </tr>
-                  )}
-                  {uscita === t.isin && (
-                    <tr className="border-b border-[var(--griglia)]">
-                      <td colSpan={colonneFlussi.length} className="pb-4 pr-3">
-                        <Uscita
-                          titolo={t}
-                          oggi={oggi}
-                          nominale={condizioni.nominale}
-                          contesto={contesto}
-                          tariffa={condizioni.tariffa}
-                        />
-                      </td>
-                    </tr>
-                  )}
+                    </Fragment>
+                  ))}
                 </Fragment>
               ))}
-            </Fragment>
-          ))}
-        </Tabella>
-        {metriche.nascostiYtmNegativo > 0 && (
-          <p className="mt-2 text-xs text-[var(--inchiostro-muto)]">
-            Non sono in elenco {metriche.nascostiYtmNegativo} titoli che a scadenza restituiscono
-            meno di quanto costano oggi, imposte comprese.
-          </p>
+            </Tabella>
+          </div>
         )}
-      </Card>
 
-      {variabili.length > 0 && (
-        <Card
-          titolo="Tasso variabile (CCTeu)"
-          descrizione="La cedola segue l'Euribor a 6 mesi più uno spread: sale se salgono i tassi, e per questo il prezzo oscilla molto meno di un tasso fisso di pari scadenza."
-        >
-          <Tabella
-            colonne={COLONNE_VARIABILI}
-            nota={
-              <>
-                Lo spread è quanto il titolo paga sopra l'Euribor, ed è l'unico dato di
-                rendimento che il listino pubblica. Cedola e YTM sono calcolati con
-                l'Euribor 6 mesi{" "}
-                {euribor6m ? (
-                  <>
-                    al <strong>{formatPct(euribor6m.percentuale, 3)}</strong> (media mensile BCE,{" "}
-                    {euribor6m.periodo})
-                  </>
-                ) : (
-                  "della BCE, che oggi manca"
-                )}{" "}
-                <strong>fermo per tutta la vita del titolo</strong>: è l'ipotesi che li
-                rende confrontabili col tasso fisso, non una previsione. Un CCTeu serve proprio
-                quando i tassi si muovono. Fiscalmente sono titoli di Stato al 12,5%, con
-                plusvalenza a rimborso compensabile.
-              </>
-            }
-          >
-            {variabili.map((t) => (
-              <Riga key={t.isin}>
-                <Cella className="min-w-[13rem]">
-                  <LinkStrumento isin={t.isin} tipo={t.tipo} emittente={t.emittente} className="font-medium">
-                    {t.nome}
-                  </LinkStrumento>
-                  <Identita tipo={t.tipo} emittente={t.emittente} prezzo={t.prezzo} isin={t.isin} nome={t.nome} />
-                </Cella>
-                <Cella>
-                  <span className="cifre-tabellari">{formatDataIT(t.dataScadenza)}</span>
-                  <span className="block text-xs text-[var(--inchiostro-muto)]">
-                    tra {formatNumero(t.anniResidui, 1)} anni
-                  </span>
-                </Cella>
-                <Cella numerica forte>
-                  {t.spread == null ? "—" : `+${formatPct(t.spread)}`}
-                </Cella>
-                <Cella numerica>{t.cedolaStimata == null ? "—" : formatPct(t.cedolaStimata, 3)}</Cella>
-                <Cella numerica>{formatPrezzo(t.prezzo)}</Cella>
-                {t.ytmNettoPct == null ? (
-                  <Cella className="text-xs text-[var(--inchiostro-muto)]">{t.motivoNonCalcolabile}</Cella>
-                ) : (
-                  <Cella numerica forte>
-                    {formatPct(t.ytmNettoPct)}
-                    {t.ytmLordoPct != null && (
-                      <span className="block text-xs font-normal text-[var(--inchiostro-muto)]">
-                        lordo {formatPct(t.ytmLordoPct)}
-                      </span>
-                    )}
-                  </Cella>
-                )}
-                <CellaScambi titolo={t} />
-              </Riga>
-            ))}
-          </Tabella>
-        </Card>
-      )}
-
-      {indicizzati.length > 0 && (
-        <Card
-          titolo="Indicizzati all'inflazione"
-          descrizione={
-            <>
-              Titoli in cui il capitale si rivaluta con il costo della vita. Sono un modello diverso
-              dal tasso fisso, per questo stanno in una tabella a parte: prezzo e cedola di un BTP€i
-              sono già <em>reali</em>, cioè al netto della rivalutazione, e non vanno confrontati
-              direttamente con quelli qui sopra.
-            </>
-          }
-        >
-          <Tabella
-            colonne={COLONNE_INDICIZZATI}
-            nota={
-              <>
-                Rendimenti <strong>lordi</strong> da entrambe le parti: il netto di un indicizzato
-                dipende dalla rivalutazione del capitale, tassata al 12,5% ma non nota in anticipo,
-                e mostrarlo sarebbe un numero sbagliato in una direzione sola. L'inflazione di
-                pareggio è confrontata con il <strong>{formatPct(condizioni.inflazioneAttesa)}</strong>{" "}
-                che ti aspetti (si cambia in «Le tue condizioni»): attenzione, i BTP€i seguono
-                l'HICP <em>dell'area euro</em> senza tabacchi (gli OATi quella francese), vicino ma
-                non uguale all'inflazione italiana. Nessun importo in euro: servirebbe il coefficiente di
-                indicizzazione del MEF, che il sito non scarica.
-              </>
-            }
-          >
-            {indicizzati.map((t) => {
-              const lettura =
-                t.confronto && leggiPareggio(t.confronto.pareggioPct, condizioni.inflazioneAttesa);
-              return (
+        {scheda === "variabili" && (
+          <div role="tabpanel" aria-label="Tasso variabile (CCTeu)">
+            <Introduzione>
+              La cedola segue l'Euribor a 6 mesi più uno spread: sale se salgono i tassi, e per
+              questo il prezzo oscilla molto meno di un tasso fisso di pari scadenza.
+            </Introduzione>
+            <Tabella
+              colonne={COLONNE_VARIABILI}
+              intera
+              vuoto={variabili.length === 0 ? "Nessun titolo con questi filtri." : undefined}
+              nota={
+                <>
+                  Lo spread è quanto il titolo paga sopra l'Euribor, ed è l'unico dato di
+                  rendimento che il listino pubblica. Cedola e YTM sono calcolati con
+                  l'Euribor 6 mesi{" "}
+                  {euribor6m ? (
+                    <>
+                      al <strong>{formatPct(euribor6m.percentuale, 3)}</strong> (media mensile BCE,{" "}
+                      {formatMeseIT(euribor6m.periodo)})
+                    </>
+                  ) : (
+                    "della BCE, che oggi manca"
+                  )}{" "}
+                  <strong>fermo per tutta la vita del titolo</strong>: è l'ipotesi che li
+                  rende confrontabili col tasso fisso, non una previsione. Un CCTeu serve proprio
+                  quando i tassi si muovono. Fiscalmente sono titoli di Stato al 12,5%, con
+                  plusvalenza a rimborso compensabile.
+                </>
+              }
+            >
+              {variabili.map((t) => (
                 <Riga key={t.isin}>
-                  <Cella className="min-w-[13rem]">
-                    <LinkStrumento isin={t.isin} tipo={t.tipo} emittente={t.emittente} className="font-medium">
-                      {t.nome}
-                    </LinkStrumento>
-                    <Identita tipo={t.tipo} emittente={t.emittente} prezzo={t.prezzo} isin={t.isin} nome={t.nome} />
+                  <CellaTitolo titolo={t} conNota />
+                  <CellaScadenza data={t.dataScadenza} anni={t.anniResidui} />
+                  <Cella numerica forte>
+                    {t.spread == null ? "—" : `+${formatPct(t.spread)}`}
                   </Cella>
-                  <Cella>
-                    <span className="cifre-tabellari">{formatDataIT(t.dataScadenza)}</span>
-                    <span className="block text-xs text-[var(--inchiostro-muto)]">
-                      tra {formatNumero(t.anniResidui, 1)} anni
-                    </span>
-                  </Cella>
-                  <Cella numerica>
-                    {formatPct(t.cedolaAnnua)}
-                    <span className="block text-xs font-normal text-[var(--inchiostro-muto)]">
-                      + rivalutazione
-                    </span>
-                  </Cella>
+                  <Cella numerica>{t.cedolaStimata == null ? "—" : formatPct(t.cedolaStimata, 3)}</Cella>
                   <Cella numerica>{formatPrezzo(t.prezzo)}</Cella>
-                  {t.ytmRealeLordoPct == null ? (
-                    // Niente rendimento: il motivo occupa le tre colonne che
-                    // sarebbero vuote, invece di tre trattini muti.
-                    <Cella colSpan={3} className="text-xs text-[var(--inchiostro-muto)]">
+                  {t.ytmNettoPct == null ? (
+                    <Cella evidenza className="text-xs text-[var(--inchiostro-muto)]">
                       {t.motivoNonCalcolabile}
                     </Cella>
                   ) : (
-                    <>
-                      <Cella numerica forte>
-                        {formatPct(t.ytmRealeLordoPct)}
-                      </Cella>
-                      <Cella>
-                        {t.confronto ? (
-                          <>
-                            <span className="text-xs">{t.confronto.nome}</span>
-                            <span className="block text-xs text-[var(--inchiostro-muto)]">
-                              {formatPct(t.confronto.ytmNominaleLordoPct)} nominale
-                              {t.confronto.scartoGiorni > 60 &&
-                                ` · scade ${formatNumero(Math.round(t.confronto.scartoGiorni / 30))} mesi ${
-                                  t.confronto.dataScadenza > t.dataScadenza ? "dopo" : "prima"
-                                }`}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-xs text-[var(--inchiostro-muto)]">
-                            {t.motivoNonCalcolabile}
-                          </span>
-                        )}
-                      </Cella>
-                      <Cella numerica forte>
-                        {t.confronto && lettura ? (
-                          <>
-                            {formatPct(t.confronto.pareggioPct)}
-                            <span
-                              className="block text-xs font-normal"
-                              style={{
-                                color:
-                                  lettura.verdetto === "pari"
-                                    ? "var(--inchiostro-muto)"
-                                    : "var(--inchiostro-2)",
-                              }}
-                            >
-                              {lettura.verdetto === "pari"
-                                ? "si equivalgono"
-                                : lettura.verdetto === "fisso"
-                                  ? "meglio il fisso"
-                                  : "meglio l'indicizzato"}
-                            </span>
-                          </>
-                        ) : (
-                          "—"
-                        )}
-                      </Cella>
-                    </>
+                    <Cella numerica evidenza>
+                      <span className="text-[0.9375rem] font-semibold">{formatPct(t.ytmNettoPct)}</span>
+                      {t.ytmLordoPct != null && <Sotto>lordo {formatPct(t.ytmLordoPct)}</Sotto>}
+                    </Cella>
                   )}
                   <CellaScambi titolo={t} />
                 </Riga>
-              );
-            })}
-          </Tabella>
-        </Card>
-      )}
+              ))}
+            </Tabella>
+          </div>
+        )}
+
+        {scheda === "indicizzati" && (
+          <div role="tabpanel" aria-label="Indicizzati all'inflazione">
+            <Introduzione>
+              Titoli in cui il capitale si rivaluta con il costo della vita. Sono un modello diverso
+              dal tasso fisso, per questo stanno in una scheda a parte: prezzo e cedola di un BTP€i
+              sono già <em>reali</em>, cioè al netto della rivalutazione, e non vanno confrontati
+              direttamente con quelli del tasso fisso.
+            </Introduzione>
+            <Tabella
+              colonne={COLONNE_INDICIZZATI}
+              intera
+              vuoto={indicizzati.length === 0 ? "Nessun titolo con questi filtri." : undefined}
+              nota={
+                <>
+                  Rendimenti <strong>lordi</strong> da entrambe le parti: il netto di un indicizzato
+                  dipende dalla rivalutazione del capitale, tassata al 12,5% ma non nota in anticipo,
+                  e mostrarlo sarebbe un numero sbagliato in una direzione sola. L'inflazione di
+                  pareggio è confrontata con il <strong>{formatPct(condizioni.inflazioneAttesa)}</strong>{" "}
+                  che ti aspetti (si cambia in «Le tue condizioni»): attenzione, i BTP€i seguono
+                  l'HICP <em>dell'area euro</em> senza tabacchi (gli OATi quella francese), vicino ma
+                  non uguale all'inflazione italiana. Nessun importo in euro: servirebbe il coefficiente di
+                  indicizzazione del MEF, che il sito non scarica.
+                </>
+              }
+            >
+              {indicizzati.map((t) => {
+                const lettura =
+                  t.confronto && leggiPareggio(t.confronto.pareggioPct, condizioni.inflazioneAttesa);
+                return (
+                  <Riga key={t.isin}>
+                    <CellaTitolo titolo={t} conNota />
+                    <CellaScadenza data={t.dataScadenza} anni={t.anniResidui} />
+                    <Cella numerica>
+                      {formatPct(t.cedolaAnnua)}
+                      <Sotto>+ rivalutazione</Sotto>
+                    </Cella>
+                    <Cella numerica>{formatPrezzo(t.prezzo)}</Cella>
+                    {t.ytmRealeLordoPct == null ? (
+                      // Niente rendimento: il motivo occupa le tre colonne che
+                      // sarebbero vuote, invece di tre trattini muti.
+                      <Cella colSpan={3} className="text-xs text-[var(--inchiostro-muto)]">
+                        {t.motivoNonCalcolabile}
+                      </Cella>
+                    ) : (
+                      <>
+                        <Cella numerica evidenza>
+                          <span className="text-[0.9375rem] font-semibold">{formatPct(t.ytmRealeLordoPct)}</span>
+                        </Cella>
+                        <Cella>
+                          {t.confronto ? (
+                            <>
+                              <span className="text-xs">{t.confronto.nome}</span>
+                              <Sotto>
+                                {formatPct(t.confronto.ytmNominaleLordoPct)} nominale
+                                {t.confronto.scartoGiorni > 60 &&
+                                  ` · scade ${formatNumero(Math.round(t.confronto.scartoGiorni / 30))} mesi ${
+                                    t.confronto.dataScadenza > t.dataScadenza ? "dopo" : "prima"
+                                  }`}
+                              </Sotto>
+                            </>
+                          ) : (
+                            <Sotto>{t.motivoNonCalcolabile}</Sotto>
+                          )}
+                        </Cella>
+                        <Cella numerica forte>
+                          {t.confronto && lettura ? (
+                            <>
+                              {formatPct(t.confronto.pareggioPct)}
+                              <span
+                                className="block text-xs font-normal"
+                                style={{
+                                  color:
+                                    lettura.verdetto === "pari"
+                                      ? "var(--inchiostro-muto)"
+                                      : "var(--inchiostro-2)",
+                                }}
+                              >
+                                {lettura.verdetto === "pari"
+                                  ? "si equivalgono"
+                                  : lettura.verdetto === "fisso"
+                                    ? "meglio il fisso"
+                                    : "meglio l'indicizzato"}
+                              </span>
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </Cella>
+                      </>
+                    )}
+                    <CellaScambi titolo={t} />
+                  </Riga>
+                );
+              })}
+            </Tabella>
+          </div>
+        )}
+      </section>
 
       {rapporto.scartate.length > 0 && <Scartate scartate={rapporto.scartate} />}
       {tutte.length === 0 && <Vuoto>Il catalogo di oggi è vuoto.</Vuoto>}

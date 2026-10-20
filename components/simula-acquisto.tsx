@@ -60,48 +60,64 @@ export function SimulaAcquisto({
   );
 
   return (
-    <section className="space-y-3 rounded-xl border border-[var(--bordo)] bg-[var(--sfondo)] p-4">
-      <h3 className="text-sm font-semibold">Se lo compro</h3>
-      <div className="flex flex-wrap gap-3">
-        <Campo etichetta="Nominale">
-          <input
-            type="text"
-            inputMode="decimal"
-            value={testoNominale}
-            aria-invalid={!nominaleValido}
-            onChange={(e) => setTestoNominale(e.target.value)}
-            className={`${classeCampo} w-36`}
-          />
-        </Campo>
-        <Campo etichetta="Prezzo" suggerimento={`chiusura del ${formatDataIT(oggi)}: ${formatPrezzoMot(titolo.prezzo)}`}>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={testoPrezzo}
-            aria-invalid={!prezzoValido}
-            onChange={(e) => setTestoPrezzo(e.target.value)}
-            className={`${classeCampo} w-28`}
-          />
-        </Campo>
+    // Tre colonne come si leggono: cosa scrivi, quanto spendi, quanto torna.
+    // Sul telefono una sotto l'altra, nello stesso ordine.
+    <section className="grid gap-x-10 gap-y-6 lg:grid-cols-[minmax(11rem,auto)_minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="space-y-3">
+        <h4 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--inchiostro-muto)]">
+          Cosa compri
+        </h4>
+        <div className="flex flex-wrap gap-3 lg:flex-col">
+          <Campo etichetta="Nominale">
+            <input
+              type="text"
+              inputMode="decimal"
+              value={testoNominale}
+              aria-invalid={!nominaleValido}
+              onChange={(e) => setTestoNominale(e.target.value)}
+              className={`${classeCampo} w-36`}
+            />
+          </Campo>
+          <Campo etichetta="Prezzo" suggerimento={`chiusura del ${formatDataIT(oggi)}: ${formatPrezzoMot(titolo.prezzo)}`}>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={testoPrezzo}
+              aria-invalid={!prezzoValido}
+              onChange={(e) => setTestoPrezzo(e.target.value)}
+              className={`${classeCampo} w-36`}
+            />
+          </Campo>
+        </div>
       </div>
       {!nominaleValido || !prezzoValido ? (
-        <p className="text-xs text-[var(--stato-critico)]">
+        <p className="text-sm text-[var(--stato-critico)] lg:col-span-2">
           Scrivi un nominale (es. «10.000») e un prezzo in base 100 (es. «98,45»).
         </p>
       ) : s == null ? (
-        <p className="text-sm text-[var(--inchiostro-muto)]">
+        <p className="text-sm text-[var(--inchiostro-muto)] lg:col-span-2">
           Il titolo scade prima del regolamento: non c'è un rendimento da calcolare.
         </p>
       ) : (
         <>
-          <Conto s={s} />
-          <RendimentiAcquisto s={s} mostraCosto={false} />
-          {ytmTabella != null && s.ytmNettoPct != null && s.ytmNettoPct !== ytmTabella && (
-            <p className="text-xs text-[var(--inchiostro-muto)]">
-              Nella tabella: {formatPct(ytmTabella)} netto, su 10.000 nominali alla chiusura
-              e senza commissioni.
-            </p>
-          )}
+          <div className="space-y-2">
+            <h4 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--inchiostro-muto)]">
+              Quanto spendi
+            </h4>
+            <Conto s={s} />
+          </div>
+          <div className="space-y-2">
+            <h4 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--inchiostro-muto)]">
+              Quanto torna
+            </h4>
+            <RendimentiAcquisto s={s} mostraCosto={false} />
+            {ytmTabella != null && s.ytmNettoPct != null && s.ytmNettoPct !== ytmTabella && (
+              <p className="text-xs text-[var(--inchiostro-muto)]">
+                Nella tabella: {formatPct(ytmTabella)} netto, su 10.000 nominali alla chiusura
+                e senza commissioni.
+              </p>
+            )}
+          </div>
         </>
       )}
     </section>
@@ -142,13 +158,13 @@ function Conto({ s }: { s: Simulazione }) {
     righe.push({ voce: "Costo netto", importo: s.costoNetto, segno: "", forte: true });
   }
   return (
-    <table className="cifre-tabellari w-full max-w-md text-xs">
+    <table className="cifre-tabellari w-full text-sm">
       <tbody>
         {righe.map((r, i) => (
-          <tr key={i} className={r.forte ? "border-t border-[var(--griglia)] font-semibold" : ""}>
-            <td className="py-0.5 pr-3">{r.voce}</td>
-            <td className="w-4 py-0.5 text-right text-[var(--inchiostro-muto)]">{r.segno}</td>
-            <td className="py-0.5 text-right">{formatEuro(r.importo)}</td>
+          <tr key={i} className={r.forte ? "border-t border-[var(--bordo)] font-semibold" : ""}>
+            <td className="py-1 pr-3 align-top">{r.voce}</td>
+            <td className="w-4 py-1 text-right align-top text-[var(--inchiostro-muto)]">{r.segno}</td>
+            <td className="whitespace-nowrap py-1 text-right align-top">{formatEuro(r.importo)}</td>
           </tr>
         ))}
       </tbody>

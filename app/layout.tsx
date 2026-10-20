@@ -1,7 +1,31 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import Link from "next/link";
+import { Navigazione } from "@/components/navigazione";
 import { AUTORE, URL_CODICE } from "@/lib/sito";
 import "./globals.css";
+
+/*
+ * I caratteri vengono da node_modules e finiscono in out/ con il resto del
+ * sito: la compilazione serale non dipende da Google Fonts, e il browser di
+ * chi guarda non chiama nessun altro indirizzo.
+ */
+const sans = localFont({
+  src: [
+    { path: "../node_modules/@fontsource-variable/ibm-plex-sans/files/ibm-plex-sans-latin-wght-normal.woff2", style: "normal" },
+    { path: "../node_modules/@fontsource-variable/ibm-plex-sans/files/ibm-plex-sans-latin-wght-italic.woff2", style: "italic" },
+  ],
+  variable: "--font-plex-sans",
+  weight: "100 700",
+  display: "swap",
+});
+
+const mono = localFont({
+  src: "../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2",
+  variable: "--font-plex-mono",
+  weight: "400",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "quantotorna — quanto rende davvero un titolo di Stato",
@@ -12,58 +36,106 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0c1a2e" },
+    { media: "(prefers-color-scheme: dark)", color: "#080d15" },
+  ],
 };
+
+/**
+ * Il segno del sito: una freccia che fa il giro e torna al punto di
+ * partenza, come il capitale che torna a scadenza.
+ */
+function Segno() {
+  return (
+    <svg viewBox="0 0 28 28" className="h-7 w-7 shrink-0" aria-hidden>
+      <rect width="28" height="28" rx="6" fill="var(--accento-pieno)" />
+      <path d="M19.5 14a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M18.6 6.9v3.6H15" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function Marchio() {
+  return (
+    <span className="text-[1.0625rem] font-semibold tracking-tight">
+      quanto<span className="font-normal opacity-75">torna</span>
+    </span>
+  );
+}
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="it" className="h-full antialiased">
-      <body className="min-h-full">
+    <html lang="it" className={`h-full antialiased ${sans.variable} ${mono.variable}`}>
+      <body className="flex min-h-full flex-col">
         <a href="#contenuto" className="salta-contenuto">
           Vai al contenuto
         </a>
-        <header className="border-b border-[var(--bordo)] bg-[var(--superficie)]">
-          <div className="mx-auto flex max-w-[1560px] flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-8">
-            <Link href="/" className="text-lg font-semibold tracking-tight">
-              quantotorna
+        <header className="bg-[var(--marchio)] text-[var(--marchio-inchiostro)]">
+          <div className="contenitore flex h-14 items-stretch justify-between gap-4">
+            <Link href="/" className="flex items-center gap-2.5">
+              <Segno />
+              <Marchio />
             </Link>
-            <nav aria-label="Sezioni" className="flex gap-4 text-sm text-[var(--inchiostro-2)]">
-              <Link href="/" className="hover:underline">
-                Titoli
-              </Link>
-              <Link href="/metodologia/" className="hover:underline">
-                Metodologia
-              </Link>
-            </nav>
+            <Navigazione />
           </div>
         </header>
-        <main id="contenuto" className="contenuto-pagina">
+        <main id="contenuto" className="flex-1">
           {children}
         </main>
-        <footer className="border-t border-[var(--bordo)] bg-[var(--superficie)]">
-          <div className="mx-auto max-w-[1560px] space-y-2 px-4 py-6 text-xs text-[var(--inchiostro-muto)] lg:px-8">
-            <p>
-              Dati: l'ultimo prezzo di ogni titolo sul MOT da Borsa Italiana, scambi degli ultimi
-              tre mesi da Euronext, prezzi e date d'asta dal MEF e da onvista, Euribor dalla BCE.
-              Scaricati una volta al giorno dopo la chiusura.
-            </p>
-            <p>
-              <strong>Non è consulenza finanziaria.</strong> I numeri vengono da un motore di
-              calcolo con le semplificazioni dichiarate nella{" "}
-              <Link href="/metodologia/" className="underline">
-                metodologia
-              </Link>
-              ; prima di comprare controlla il conto del tuo intermediario.
-            </p>
-            <p>
-              Dati e calcoli sono forniti «così come sono» (<em>as is</em>), senza alcuna garanzia
-              di esattezza, completezza o aggiornamento. Non si assume alcuna responsabilità per
-              errori od omissioni, né per l'uso che se ne fa o per le decisioni prese sulla base di
-              queste pagine.
-            </p>
-            <p>
-              Niente cookie, niente statistiche di visita, niente account: quello che scrivi resta
-              nel tuo browser.{" "}
-              <a href={URL_CODICE} className="underline">
+        <footer className="mt-12 border-t border-[var(--bordo)] bg-[var(--superficie)] text-xs text-[var(--inchiostro-muto)]">
+          <div className="contenitore grid gap-8 py-10 md:grid-cols-3">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-[var(--inchiostro)]">
+                <Segno />
+                <Marchio />
+              </div>
+              <p>
+                Quanto torna davvero un titolo di Stato tenuto fino a scadenza: rendimento netto
+                secondo il fisco italiano e cifra finale in euro.
+              </p>
+              <p>
+                Niente cookie, niente statistiche di visita, niente account: quello che scrivi resta
+                nel tuo browser.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--inchiostro)]">
+                Dati
+              </h2>
+              <p>
+                L'ultimo prezzo di ogni titolo sul MOT da Borsa Italiana, scambi degli ultimi tre
+                mesi da Euronext, prezzi e date d'asta dal MEF e da onvista, Euribor dalla BCE.
+                Scaricati una volta al giorno dopo la chiusura.
+              </p>
+              <p>
+                Come si fanno i conti, con le semplificazioni dichiarate:{" "}
+                <Link href="/metodologia/" className="text-[var(--accento)] underline underline-offset-2">
+                  metodologia
+                </Link>
+                .
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--inchiostro)]">
+                Avvertenze
+              </h2>
+              <p>
+                <strong className="text-[var(--inchiostro-2)]">Non è consulenza finanziaria.</strong>{" "}
+                I numeri vengono da un motore di calcolo con le semplificazioni dichiarate nella
+                metodologia; prima di comprare controlla il conto del tuo intermediario.
+              </p>
+              <p>
+                Dati e calcoli sono forniti «così come sono» (<em>as is</em>), senza alcuna garanzia
+                di esattezza, completezza o aggiornamento. Non si assume alcuna responsabilità per
+                errori od omissioni, né per l'uso che se ne fa o per le decisioni prese sulla base di
+                queste pagine.
+              </p>
+            </div>
+          </div>
+          <div className="border-t border-[var(--griglia)]">
+            <p className="contenitore py-4">
+              <a href={URL_CODICE} className="text-[var(--accento)] underline underline-offset-2">
                 Codice aperto
               </a>{" "}
               con licenza AGPL-3.0, di {AUTORE}.

@@ -1,21 +1,48 @@
 @import "tailwindcss";
 
 /*
+ * Caratteri e misure. IBM Plex Sans per tutto, con le cifre tabellari; Plex
+ * Mono per i codici (ISIN), che si leggono carattere per carattere. Il
+ * testo delle note resta a 13 px: chi compra BTP dalla banca di casa non
+ * legge col naso sullo schermo.
+ */
+@theme {
+  --font-sans: var(--font-plex-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.45;
+}
+
+/*
  * Palette dataviz di riferimento, validata per i daltonismi in entrambi i
  * modi. I ruoli sono variabili CSS: chiaro e scuro si scambiano qui, i
  * componenti usano solo i ruoli.
+ *
+ * Il blu delle serie resta ai grafici; link e bottoni hanno il loro
+ * `--accento`, più scuro, perché il testo bianco sopra si legga.
  */
 :root {
   color-scheme: light;
-  --sfondo: #f4f6f8;
+  --sfondo: #f3f4f6;
   --superficie: #ffffff;
-  --inchiostro: #17243a;
-  --inchiostro-2: #536078;
-  --inchiostro-muto: #657186;
-  --griglia: #e8edf3;
+  --superficie-2: #f8f9fb;
+  --inchiostro: #101828;
+  --inchiostro-2: #3b4658;
+  --inchiostro-muto: #5b6677;
+  --griglia: #eceff3;
   --asse: #c3c2b7;
-  --bordo: #dfe5ed;
-  --accento-tenue: #eaf1fc;
+  --bordo: #dde1e7;
+  --bordo-forte: #c3cad4;
+  --accento: #0a5bb5;
+  --accento-pieno: #0a5bb5;
+  --accento-tenue: #e9f1fb;
+  --evidenza: #f2f6fc;
+  --marchio: #0c1a2e;
+  --marchio-inchiostro: #ffffff;
+  --marchio-muto: #a8b5c7;
+  --ombra-menu: 0 10px 30px -8px rgb(16 24 40 / 0.22), 0 2px 6px rgb(16 24 40 / 0.06);
   --serie-1: #2a78d6;
   --serie-2: #eb6834;
   --serie-3: #1baf7a;
@@ -27,22 +54,31 @@
   --stato-ok: #0ca30c;
   --stato-avviso: #fab219;
   --stato-serio: #ec835a;
-  --stato-critico: #d03b3b;
-  --delta-buono: #006300;
+  --stato-critico: #c8352f;
+  --delta-buono: #0b7a32;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --sfondo: #101722;
-    --superficie: #182231;
-    --inchiostro: #edf2fa;
-    --inchiostro-2: #bac6d9;
-    --inchiostro-muto: #98a8bf;
-    --griglia: #283447;
+    --sfondo: #0c121b;
+    --superficie: #131b26;
+    --superficie-2: #18212d;
+    --inchiostro: #e9eef5;
+    --inchiostro-2: #b9c4d4;
+    --inchiostro-muto: #95a3b6;
+    --griglia: #212b38;
     --asse: #383835;
-    --bordo: #2c3b50;
-    --accento-tenue: #203655;
+    --bordo: #283344;
+    --bordo-forte: #3a4759;
+    --accento: #72acf3;
+    --accento-pieno: #2a67b8;
+    --accento-tenue: #172a43;
+    --evidenza: #162334;
+    --marchio: #080d15;
+    --marchio-inchiostro: #e9eef5;
+    --marchio-muto: #95a3b6;
+    --ombra-menu: 0 12px 32px -8px rgb(0 0 0 / 0.6);
     --serie-1: #3987e5;
     --serie-2: #d95926;
     --serie-3: #199e70;
@@ -51,14 +87,18 @@
     --serie-6: #008300;
     --serie-7: #9085e9;
     --serie-8: #e66767;
-    --delta-buono: #0ca30c;
+    --stato-critico: #e66767;
+    --delta-buono: #3cc16b;
   }
 }
 
 body {
   background: var(--sfondo);
   color: var(--inchiostro);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  font-feature-settings: "kern";
 }
 
 /* Colonne numeriche allineate (tabelle, assi). */
@@ -66,20 +106,59 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.contenuto-pagina { max-width: 1560px; margin: auto; padding: 24px 16px 80px; }
-.tabella-scroll { max-height: 72vh; scrollbar-width: thin; }
+/* La larghezza del sito: ogni pagina mette qui dentro il suo contenuto. */
+.contenitore { max-width: 1440px; margin-inline: auto; padding-inline: 16px; }
+@media (min-width: 1024px) {
+  .contenitore { padding-inline: 32px; }
+}
+
+/*
+ * La tabella del listino. Scorre dentro il suo riquadro con l'intestazione
+ * ferma; le regole valgono solo per le sue celle dirette, non per le tabelle
+ * dentro una riga aperta (il conto d'acquisto, gli scenari d'uscita).
+ */
+.tabella-scroll { max-height: 75vh; scrollbar-width: thin; }
 .tabella-scroll.tabella-intera { max-height: none; }
 .tabella-scroll th { white-space: nowrap; }
-.tabella-scroll td { padding-top: 12px; padding-bottom: 12px; }
-.tabella-scroll tbody tr:hover { background: color-mix(in srgb, var(--accento-tenue) 45%, transparent); }
-.salta-contenuto { position: fixed; top: -80px; left: 16px; z-index: 100; background: var(--superficie); padding: 12px; border: 2px solid var(--serie-1); }
-.salta-contenuto:focus { top: 12px; }
-:focus-visible { outline: 2px solid var(--serie-1); outline-offset: 3px; }
-button, a, summary { -webkit-tap-highlight-color: transparent; }
-.statistica-valore { font-size: clamp(1rem, 1.65vw, 1.5rem); }
-@media (min-width: 1024px) {
-  .contenuto-pagina { padding: 30px 32px 64px; }
+.tabella-scroll > table > tbody > tr > td { padding-top: 10px; padding-bottom: 10px; }
+.tabella-scroll > table > tbody > tr[role="button"]:hover > td { background: var(--superficie-2); }
+.tabella-scroll > table > tbody > tr[aria-expanded="true"] > td { background: var(--evidenza); }
+/* La colonna da guardare per prima (lo YTM netto) ha un fondo suo. */
+.tabella-scroll .colonna-evidenza { background: var(--evidenza); }
+
+/*
+ * Sul telefono la tabella scorre in orizzontale: il nome del titolo resta
+ * fermo a sinistra, se no dopo due colonne non si sa più di che riga sono i
+ * numeri. Il dettaglio aperto sotto una riga resta largo quanto il riquadro
+ * e fermo anche lui, invece di partire dalla colonna in cui si era arrivati.
+ */
+@media (max-width: 767px) {
+  .tabella-scroll > table > thead > tr > th:first-child,
+  .tabella-scroll > table > tbody > tr > td.cella-ferma {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--superficie);
+    box-shadow: 1px 0 0 var(--griglia);
+  }
+  .tabella-scroll > table > thead > tr > th:first-child { z-index: 3; background: var(--superficie-2); }
+  .tabella-scroll > table > tbody > tr[aria-expanded="true"] > td.cella-ferma { background: var(--evidenza); }
+  /* Lo schermo meno i margini del contenitore (16 per lato). */
+  .dettaglio-riga {
+    position: sticky;
+    left: 0;
+    width: calc(100vw - 34px);
+  }
 }
+
+.salta-contenuto { position: fixed; top: -80px; left: 16px; z-index: 100; background: var(--superficie); padding: 12px; border: 2px solid var(--accento); }
+.salta-contenuto:focus { top: 12px; }
+:focus-visible { outline: 2px solid var(--accento); outline-offset: 2px; }
+button, a, summary { -webkit-tap-highlight-color: transparent; }
+summary { list-style: none; }
+summary::-webkit-details-marker { display: none; }
+details[open] > summary .ruota-aperto { transform: rotate(90deg); }
+.statistica-valore { font-size: clamp(1rem, 1.65vw, 1.5rem); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
 }

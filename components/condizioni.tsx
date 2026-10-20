@@ -1,17 +1,19 @@
 "use client";
 
 import { Termine } from "@/components/termine";
-import { Bottone, Campo, Card, classeCampo, classeInput } from "@/components/ui";
+import { Bottone, Campo, classeCampo, classeInput } from "@/components/ui";
 import {
   CHIAVE_CONDIZIONI,
   CONDIZIONI_PREDEFINITE,
   leggiCondizioni,
   vocePerAnno,
+  zainettoVivo,
   type Condizioni,
 } from "@/lib/client/condizioni";
 import {
   euroInInput,
   formatDataIT,
+  formatEuro,
   formatNumero,
   numeroInInput,
   parseEuroInCentesimi,
@@ -127,7 +129,35 @@ const percentuale = {
   },
 };
 
-export function CardCondizioni({
+/**
+ * Le condizioni in una riga, per il bottone che apre il pannello: con che
+ * nominale, commissioni e zainetto si stanno facendo le simulazioni, senza
+ * doverlo aprire.
+ */
+export function riassuntoCondizioni(condizioni: Condizioni, oggi: string): string {
+  const { tariffa } = condizioni;
+  const senzaCommissioni =
+    tariffa.percentuale === 0 && tariffa.minimo === 0 && tariffa.massimo === 0 && tariffa.fisso === 0;
+  const residuo = zainettoVivo(condizioni.zainetto, oggi).reduce((t, v) => t + v.importoResiduo, 0);
+  return [
+    `${formatNumero(condizioni.nominale)} € nominali`,
+    senzaCommissioni ? "senza commissioni" : "con le tue commissioni",
+    residuo > 0 ? `zainetto di ${formatEuro(residuo)}` : "zainetto vuoto",
+  ].join(" · ");
+}
+
+/** Titoletto di una delle tre parti del pannello. */
+function Parte({ titolo, spiegazione, children }: { titolo: React.ReactNode; spiegazione: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="min-w-0">
+      <h3 className="text-sm font-semibold">{titolo}</h3>
+      <p className="mt-1 mb-3 text-xs text-[var(--inchiostro-muto)]">{spiegazione}</p>
+      {children}
+    </section>
+  );
+}
+
+export function PannelloCondizioni({
   condizioni,
   onCambia,
   oggi,
@@ -161,170 +191,171 @@ export function CardCondizioni({
   }
 
   return (
-    <Card
-      titolo="Le tue condizioni"
-      espandibile
-      descrizione={
-        <>
-          Servono alle simulazioni sotto ogni titolo: la tabella resta su 10.000
-          nominali e senza commissioni, perché sia uguale per tutti. Quello che
-          scrivi qui resta in questo browser: il sito non ha un server a cui
-          mandarlo.
-        </>
-      }
-    >
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <CampoNumero
-          etichetta="Nominale da simulare"
-          valore={condizioni.nominale}
-          inTesto={formatNumeroIntero}
-          daTesto={(t) => {
-            const n = parseQuantitaIT(t);
-            return n != null && n > 0 && n <= 100_000_000 ? n : null;
-          }}
-          onCambia={(nominale) => onCambia({ ...condizioni, nominale })}
-          unita="€ nom."
-        />
-        <CampoNumero
-          etichetta="Inflazione che ti aspetti"
-          valore={condizioni.inflazioneAttesa}
-          {...percentuale}
-          onCambia={(inflazioneAttesa) => onCambia({ ...condizioni, inflazioneAttesa })}
-          unita="% l'anno"
-          suggerimento="Per leggere l'inflazione di pareggio dei BTP€i."
-        />
-      </div>
-
-      <h3 className="mb-2 mt-5 text-sm font-semibold">
-        <Termine chiave="commissioni">Commissioni</Termine> del tuo intermediario sul MOT
-      </h3>
-      <p className="mb-3 text-xs text-[var(--inchiostro-muto)]">
-        Percentuale sul controvalore, tra un minimo e un massimo, più un fisso per
-        ogni eseguito. Lascia zero dove la tua tariffa non prevede la voce.
+    <div className="space-y-5">
+      <p className="max-w-3xl text-sm text-[var(--inchiostro-2)]">
+        Servono alle simulazioni sotto ogni titolo: la tabella resta su 10.000 nominali e senza
+        commissioni, perché sia uguale per tutti. Quello che scrivi qui resta in questo browser: il
+        sito non ha un server a cui mandarlo.
       </p>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <CampoNumero
-          etichetta="Percentuale"
-          valore={tariffa.percentuale}
-          {...percentuale}
-          onCambia={(v) => cambiaTariffa({ percentuale: v })}
-          unita="%"
-        />
-        <CampoNumero
-          etichetta="Minimo"
-          valore={tariffa.minimo}
-          {...euro}
-          onCambia={(v) => cambiaTariffa({ minimo: v })}
-          unita="€"
-        />
-        <CampoNumero
-          etichetta="Massimo"
-          valore={tariffa.massimo}
-          {...euro}
-          onCambia={(v) => cambiaTariffa({ massimo: v })}
-          unita="€"
-          suggerimento="Zero = nessun massimo."
-        />
-        <CampoNumero
-          etichetta="Fisso per eseguito"
-          valore={tariffa.fisso}
-          {...euro}
-          onCambia={(v) => cambiaTariffa({ fisso: v })}
-          unita="€"
-        />
-      </div>
-
-      <h3 className="mb-2 mt-5 text-sm font-semibold">
-        Il tuo <Termine chiave="zainetto">zainetto fiscale</Termine>
-      </h3>
-      <p className="mb-3 text-xs text-[var(--inchiostro-muto)]">
-        Le minusvalenze ancora da compensare, per anno in cui sono nate: valgono
-        fino al 31 dicembre del quarto anno dopo. Le usa «Se esco prima» per
-        tassare l'eventuale plusvalenza.
-      </p>
-      {zainetto.length > 0 && (
-        <ul className="mb-3 space-y-1 text-sm">
-          {zainetto.map((v) => (
-            <li key={v.annoCompetenza} className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className="cifre-tabellari">
-                {v.annoCompetenza}: {euroInInput(v.importoResiduo)} €
-              </span>
-              <span
-                className={`text-xs ${v.dataScadenza < oggi ? "text-[var(--stato-critico)]" : "text-[var(--inchiostro-muto)]"}`}
-              >
-                {v.dataScadenza < oggi ? "scaduta il" : "utilizzabile fino al"}{" "}
-                {formatDataIT(v.dataScadenza)}
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  onCambia({
-                    ...condizioni,
-                    zainetto: zainetto.filter((x) => x.annoCompetenza !== v.annoCompetenza),
-                  })
-                }
-                className="text-xs underline"
-              >
-                Togli
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="flex flex-wrap items-end gap-3">
-        <Campo etichetta="Anno">
-          <input
-            type="number"
-            inputMode="numeric"
-            min={annoCorrente - 4}
-            max={annoCorrente}
-            value={nuovoAnno}
-            onChange={(e) => setNuovoAnno(e.target.value)}
-            className={`${classeCampo} w-24`}
-          />
-        </Campo>
-        <Campo etichetta="Minusvalenza">
-          <span className="flex items-center gap-2">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={nuovoImporto}
-              onChange={(e) => setNuovoImporto(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") aggiungiVoce();
+      <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1.2fr)]">
+        <Parte titolo="Simulazione" spiegazione="Il nominale di partenza delle simulazioni d'acquisto e di uscita.">
+          <div className="space-y-3">
+            <CampoNumero
+              etichetta="Nominale da simulare"
+              valore={condizioni.nominale}
+              inTesto={formatNumeroIntero}
+              daTesto={(t) => {
+                const n = parseQuantitaIT(t);
+                return n != null && n > 0 && n <= 100_000_000 ? n : null;
               }}
-              className={`${classeCampo} w-32`}
+              onCambia={(nominale) => onCambia({ ...condizioni, nominale })}
+              unita="€ nom."
             />
-            <span className="text-sm text-[var(--inchiostro-muto)]">€</span>
-          </span>
-        </Campo>
-        <Bottone tipo="secondario" onClick={aggiungiVoce}>
-          Aggiungi
-        </Bottone>
-      </div>
-      <label className="mt-4 flex items-start gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={condizioni.compensazioneTitoliStatoRidotta}
-          onChange={(e) =>
-            onCambia({ ...condizioni, compensazioneTitoliStatoRidotta: e.target.checked })
+            <CampoNumero
+              etichetta="Inflazione che ti aspetti"
+              valore={condizioni.inflazioneAttesa}
+              {...percentuale}
+              onCambia={(inflazioneAttesa) => onCambia({ ...condizioni, inflazioneAttesa })}
+              unita="% l'anno"
+              suggerimento="Per leggere l'inflazione di pareggio dei BTP€i."
+            />
+          </div>
+        </Parte>
+
+        <Parte
+          titolo={
+            <>
+              <Termine chiave="commissioni">Commissioni</Termine> del tuo intermediario sul MOT
+            </>
           }
-          className="mt-0.5 h-4 w-4 accent-[var(--serie-1)]"
-        />
-        <span>
-          Riduci la plusvalenza al 48,08% <em>prima</em> di compensarla
-          <span className="block text-xs text-[var(--inchiostro-muto)]">
-            La norma non è univoca: di partenza lo zainetto compensa la plusvalenza
-            intera e il 48,08% si applica alla parte che resta scoperta. Con questa
-            scelta si compensa la base già ridotta, e lo zainetto dura di più.
-          </span>
-        </span>
-      </label>
-      <div className="mt-4">
+          spiegazione="Percentuale sul controvalore, tra un minimo e un massimo, più un fisso per ogni eseguito. Lascia zero dove la tua tariffa non prevede la voce."
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <CampoNumero
+              etichetta="Percentuale"
+              valore={tariffa.percentuale}
+              {...percentuale}
+              onCambia={(v) => cambiaTariffa({ percentuale: v })}
+              unita="%"
+            />
+            <CampoNumero
+              etichetta="Fisso per eseguito"
+              valore={tariffa.fisso}
+              {...euro}
+              onCambia={(v) => cambiaTariffa({ fisso: v })}
+              unita="€"
+            />
+            <CampoNumero
+              etichetta="Minimo"
+              valore={tariffa.minimo}
+              {...euro}
+              onCambia={(v) => cambiaTariffa({ minimo: v })}
+              unita="€"
+            />
+            <CampoNumero
+              etichetta="Massimo"
+              valore={tariffa.massimo}
+              {...euro}
+              onCambia={(v) => cambiaTariffa({ massimo: v })}
+              unita="€"
+              suggerimento="Zero = nessun massimo."
+            />
+          </div>
+        </Parte>
+
+        <Parte
+          titolo={
+            <>
+              Il tuo <Termine chiave="zainetto">zainetto fiscale</Termine>
+            </>
+          }
+          spiegazione="Le minusvalenze ancora da compensare, per anno in cui sono nate: valgono fino al 31 dicembre del quarto anno dopo. Le usa «Se esco prima» per tassare l'eventuale plusvalenza."
+        >
+          {zainetto.length > 0 && (
+            <ul className="mb-3 divide-y divide-[var(--griglia)] rounded-md border border-[var(--bordo)] text-sm">
+              {zainetto.map((v) => (
+                <li key={v.annoCompetenza} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+                  <span className="cifre-tabellari font-medium">
+                    {v.annoCompetenza}: {euroInInput(v.importoResiduo)} €
+                  </span>
+                  <span
+                    className={`flex-1 text-xs ${v.dataScadenza < oggi ? "text-[var(--stato-critico)]" : "text-[var(--inchiostro-muto)]"}`}
+                  >
+                    {v.dataScadenza < oggi ? "scaduta il" : "utilizzabile fino al"}{" "}
+                    {formatDataIT(v.dataScadenza)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCambia({
+                        ...condizioni,
+                        zainetto: zainetto.filter((x) => x.annoCompetenza !== v.annoCompetenza),
+                      })
+                    }
+                    className="text-xs font-medium text-[var(--accento)] hover:underline"
+                  >
+                    Togli
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex flex-wrap items-end gap-3">
+            <Campo etichetta="Anno">
+              <input
+                type="number"
+                inputMode="numeric"
+                min={annoCorrente - 4}
+                max={annoCorrente}
+                value={nuovoAnno}
+                onChange={(e) => setNuovoAnno(e.target.value)}
+                className={`${classeCampo} w-24`}
+              />
+            </Campo>
+            <Campo etichetta="Minusvalenza">
+              <span className="flex items-center gap-2">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={nuovoImporto}
+                  onChange={(e) => setNuovoImporto(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") aggiungiVoce();
+                  }}
+                  className={`${classeCampo} w-32`}
+                />
+                <span className="text-sm text-[var(--inchiostro-muto)]">€</span>
+              </span>
+            </Campo>
+            <Bottone tipo="secondario" onClick={aggiungiVoce}>
+              Aggiungi
+            </Bottone>
+          </div>
+          <label className="mt-4 flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={condizioni.compensazioneTitoliStatoRidotta}
+              onChange={(e) =>
+                onCambia({ ...condizioni, compensazioneTitoliStatoRidotta: e.target.checked })
+              }
+              className="mt-0.5 h-4 w-4 accent-[var(--accento-pieno)]"
+            />
+            <span>
+              Riduci la plusvalenza al 48,08% <em>prima</em> di compensarla
+              <span className="block text-xs text-[var(--inchiostro-muto)]">
+                La norma non è univoca: di partenza lo zainetto compensa la plusvalenza
+                intera e il 48,08% si applica alla parte che resta scoperta. Con questa
+                scelta si compensa la base già ridotta, e lo zainetto dura di più.
+              </span>
+            </span>
+          </label>
+        </Parte>
+      </div>
+      <div className="border-t border-[var(--griglia)] pt-4">
         <Bottone tipo="secondario" onClick={() => onCambia(CONDIZIONI_PREDEFINITE)}>
           Torna alle condizioni di partenza
         </Bottone>
       </div>
-    </Card>
+    </div>
   );
 }

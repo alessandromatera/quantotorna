@@ -119,13 +119,13 @@ export function RendimentiAcquisto({
   }
 
   return (
-    <div className="space-y-2 text-sm">
-      <dl className="grid max-w-md grid-cols-[1fr_auto] gap-x-4 gap-y-1">
+    <div className="space-y-3 text-sm">
+      <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5">
         <dt>
           <Termine chiave="ytmNetto">YTM netto</Termine>
           <span className="block text-xs text-[var(--inchiostro-muto)]">imposte e commissioni comprese</span>
         </dt>
-        <dd className="cifre-tabellari text-right font-semibold">
+        <dd className="cifre-tabellari text-right text-lg font-semibold">
           {s.ytmNettoPct == null ? "—" : formatPct(s.ytmNettoPct)}
         </dd>
         <dt>
@@ -145,13 +145,13 @@ export function RendimentiAcquisto({
           </>
         )}
       </dl>
-      <table className="cifre-tabellari w-full max-w-md text-xs">
+      <table className="cifre-tabellari w-full text-sm">
         <tbody>
           {righe.map((r, i) => (
-            <tr key={i} className={r.forte ? "border-t border-[var(--griglia)] font-semibold" : ""}>
-              <td className="py-0.5 pr-3 align-top">{r.voce}</td>
+            <tr key={i} className={r.forte ? "border-t border-[var(--bordo)] font-semibold" : ""}>
+              <td className="py-1 pr-3 align-top">{r.voce}</td>
               <td
-                className="py-0.5 text-right align-top"
+                className={`whitespace-nowrap py-1 text-right align-top ${r.segno ? "text-base" : ""}`}
                 style={r.segno ? { color: r.importo >= 0 ? "var(--delta-buono)" : "var(--stato-critico)" } : undefined}
               >
                 {r.segno ? formatEuroSegno(r.importo) : formatEuro(r.importo)}

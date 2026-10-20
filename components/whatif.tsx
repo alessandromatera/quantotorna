@@ -127,9 +127,9 @@ export function CalcolatoreUscita({
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-[var(--bordo)] bg-[var(--sfondo)] p-4">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-xs font-medium uppercase tracking-wide text-[var(--inchiostro-muto)]">
+        <span className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--inchiostro-muto)]">
           Esco fra
         </span>
         <Segmentato
@@ -142,7 +142,7 @@ export function CalcolatoreUscita({
 
       <div className="space-y-2">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <label htmlFor="shock-tassi" className="text-xs font-medium uppercase tracking-wide text-[var(--inchiostro-muto)]">
+          <label htmlFor="shock-tassi" className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--inchiostro-muto)]">
             E i tassi nel frattempo
           </label>
           <span className="cifre-tabellari text-sm font-semibold">
@@ -160,7 +160,7 @@ export function CalcolatoreUscita({
           step={0.25}
           value={shock}
           onChange={(e) => setShock(Number(e.target.value))}
-          className="w-full accent-[var(--serie-1)]"
+          className="w-full accent-[var(--accento-pieno)]"
         />
         <div className="flex flex-wrap gap-2">
           {PRESET.map((p) => (
@@ -170,10 +170,10 @@ export function CalcolatoreUscita({
               title={p.titolo}
               aria-pressed={shock === p.shock}
               onClick={() => setShock(p.shock)}
-              className={`rounded-lg border px-2.5 py-1 text-xs transition-colors ${
+              className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
                 shock === p.shock
-                  ? "border-[var(--serie-1)] bg-[var(--serie-1)] text-white"
-                  : "border-[var(--bordo)] text-[var(--inchiostro-2)] hover:bg-[var(--griglia)]"
+                  ? "border-[var(--accento-pieno)] bg-[var(--accento-pieno)] text-white"
+                  : "border-[var(--bordo)] bg-[var(--superficie)] text-[var(--inchiostro-2)] hover:border-[var(--bordo-forte)]"
               }`}
             >
               {p.nome}
@@ -217,7 +217,7 @@ function Pareggio({
 }) {
   if (esito.aScadenza) {
     return (
-      <div className="rounded-lg border border-[var(--bordo)] bg-[var(--superficie)] p-3 text-sm">
+      <div className="rounded-md border border-[var(--bordo)] bg-[var(--superficie)] p-3 text-sm">
         <strong>Tenuto fino al rimborso non c'è rischio prezzo:</strong> si
         incassa 100 comunque, e i tassi lungo la strada non cambiano il
         risultato. È l'unica data in cui il titolo smette di dipendere dal
@@ -237,8 +237,8 @@ function Pareggio({
   if (pareggio.tipo === "sempreInGuadagno") {
     return (
       <div
-        className="rounded-lg border bg-[var(--superficie)] p-3 text-sm"
-        style={{ borderColor: "var(--delta-buono)" }}
+        className="rounded-md border border-l-4 border-[var(--bordo)] bg-[var(--superficie)] p-3 text-sm"
+        style={{ borderLeftColor: "var(--delta-buono)" }}
       >
         <strong>Nessun rialzo plausibile porta in perdita.</strong> A questa
         distanza dal rimborso il prezzo non ha più lo spazio per scendere
@@ -251,8 +251,8 @@ function Pareggio({
   if (pareggio.tipo === "sempreInPerdita") {
     return (
       <div
-        className="rounded-lg border bg-[var(--superficie)] p-3 text-sm"
-        style={{ borderColor: "var(--stato-critico)" }}
+        className="rounded-md border border-l-4 border-[var(--bordo)] bg-[var(--superficie)] p-3 text-sm"
+        style={{ borderLeftColor: "var(--stato-critico)" }}
       >
         <strong>In perdita in ogni scenario.</strong> Su questo orizzonte
         nemmeno un crollo dei tassi copre i costi dell'andata e ritorno:
@@ -270,8 +270,8 @@ function Pareggio({
         : "var(--delta-buono)";
   return (
     <div
-      className="rounded-lg border bg-[var(--superficie)] p-3"
-      style={{ borderColor: tono }}
+      className="rounded-md border border-l-4 border-[var(--bordo)] bg-[var(--superficie)] p-3"
+      style={{ borderLeftColor: tono }}
     >
       <div className="text-xs font-medium uppercase tracking-wide text-[var(--inchiostro-muto)]">
         <Termine chiave="shockPareggio">Margine prima della perdita</Termine>
@@ -385,7 +385,7 @@ function Scomposizione({
           vale finché non scade, e va detto nello stesso posto in cui si vede
           il rosso — altrimenti la si scopre troppo tardi per usarla. */}
       {esito.minusvalenzaGenerata && (
-        <p className="rounded-lg bg-[var(--griglia)] p-2 text-xs text-[var(--inchiostro-2)]">
+        <p className="rounded-md bg-[var(--griglia)] p-2 text-xs text-[var(--inchiostro-2)]">
           Uscendo in perdita si crea{" "}
           <strong>{formatEuro(esito.minusvalenzaGenerata.importo)}</strong> di
           minusvalenza compensabile, utilizzabile fino al{" "}
@@ -418,7 +418,7 @@ function GrigliaScenari({
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <caption className="mb-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--inchiostro-muto)]">
+        <caption className="mb-2 text-left text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--inchiostro-muto)]">
           Rendimento netto annuo per orizzonte e movimento dei tassi
         </caption>
         <thead>
