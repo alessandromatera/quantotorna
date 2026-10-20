@@ -12,7 +12,12 @@
  * - `identita`: righe `nome=` ed `email=`, l'unica identità con cui si
  *   firmano i commit;
  * - `ammessi.txt` (facoltativo): righe `percorso<TAB>voce`, eccezioni già
- *   guardate a mano; `*` come percorso vale ovunque.
+ *   guardate a mano; `*` come percorso vale ovunque;
+ * - `aggiorna-lista` (facoltativo, eseguibile): se c'è, si lancia prima di
+ *   tutto per rigenerare la lista, così un dato nuovo dell'autore è coperto
+ *   dal commit successivo senza che nessuno debba ricordarselo. Se fallisce
+ *   il controllo si ferma: una lista vecchia lascerebbe passare proprio i
+ *   dati più recenti.
  *
  * È il controllo che non sbaglia sulle stringhe esatte. Quello che una
  * ricerca di testo non vede — una frase che rivela una posizione, un importo
@@ -51,6 +56,16 @@ function leggiRighe(file) {
 
 function git(...argomenti) {
   return execFileSync("git", argomenti, { encoding: "buffer", maxBuffer: 256 * 1024 * 1024 });
+}
+
+function aggiornaLista() {
+  const comando = join(CONFIG, "aggiorna-lista");
+  if (!existsSync(comando)) return;
+  try {
+    execFileSync(comando, { stdio: ["ignore", "ignore", "inherit"] });
+  } catch {
+    throw new Error(`l'aggiornamento della lista (${comando}) non è riuscito`);
+  }
 }
 
 function caricaConfigurazione() {
@@ -178,6 +193,7 @@ function main() {
   const [modo, ...resto] = process.argv.slice(2);
   let config;
   try {
+    aggiornaLista();
     config = caricaConfigurazione();
   } catch (e) {
     console.error(`controllo-privacy: ${e.message}. Niente esce finché non c'è.`);
