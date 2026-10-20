@@ -14,8 +14,14 @@ npm ci
 npm test
 npm run scarica   # scarica i dati del giorno in dati/catalogo.json (un minuto)
 npm run build     # compila il sito in out/
-npm run dev       # oppure: il sito in sviluppo su http://localhost:3100
+npm run anteprima # compila e serve out/ su http://localhost:3100
+npm run dev       # oppure: il sito in sviluppo, sulla stessa porta
 ```
+
+Per provarlo da un telefono o da un altro computer di casa:
+`npm run anteprima -- --rete`, che stampa l'indirizzo da aprire. Il server di
+sviluppo non va bene per questo: Next blocca i suoi file a chi non arriva da
+localhost, e la pagina si vede ma non risponde ai clic.
 
 Lo scaricamento va lanciato dopo la chiusura del MOT (17:30): prima, l'ultimo
 prezzo è quello della seduta in corso. Il primo giro trova i dati di
