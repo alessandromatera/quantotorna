@@ -18,7 +18,11 @@ if ! command -v claude >/dev/null 2>&1; then
 fi
 
 radice=$(git rev-parse --show-toplevel)
-config="$HOME/.config/quantotorna"
+# La cartella privata sta accanto alla repo, fuori da lei.
+config=$(cd "$radice/../privata" && pwd) || {
+  echo "guardiano-privacy: manca la cartella privata accanto alla repo: push fermato." >&2
+  exit 1
+}
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 

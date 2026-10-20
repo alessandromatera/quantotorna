@@ -41,8 +41,8 @@ git config core.hooksPath scripts/hooks
 ```
 
 - a ogni commit, `scripts/controllo-privacy.mjs` cerca nei file in stage le
-  voci di una lista di dati personali tenuta fuori dalla repo, in
-  `~/.config/quantotorna/`;
+  voci di una lista di dati personali tenuta fuori dalla repo, in una
+  cartella `privata` accanto a lei;
 - a ogni push, lo stesso controllo sui commit che escono, poi l'agente
   `guardiano-privacy` (`.claude/agents/`), che legge le modifiche e ferma
   tutto se trova qualcosa che dice cosa possiede o fa chi scrive.

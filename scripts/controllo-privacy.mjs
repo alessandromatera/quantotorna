@@ -14,7 +14,8 @@
  * può arrivare nel sito solo dal codice, che pre-commit e pre-push
  * controllano con tutte le voci; chi compila il sito non ha la lista.
  *
- * Legge, FUORI dalla repo, in ~/.config/quantotorna/:
+ * Legge, FUORI dalla repo, nella cartella `privata` che le sta accanto
+ * (quantotorna/repo e quantotorna/privata):
  * - `dati-personali.txt`: una voce per riga (# per i commenti). Ogni
  *   occorrenza, maiuscole o minuscole, ferma tutto;
  * - `identita`: righe `nome=` ed `email=`, l'unica identità con cui si
@@ -37,10 +38,10 @@
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { homedir } from "node:os";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const CONFIG = join(homedir(), ".config", "quantotorna");
+const CONFIG = fileURLToPath(new URL("../../privata/", import.meta.url));
 
 /** File che non devono mai uscire, qualunque cosa contengano. */
 const FILE_VIETATI = [
@@ -239,7 +240,7 @@ function main() {
     console.error(`controllo-privacy: FERMO, ${problemi.length} occorrenze di dati personali:`);
     for (const p of problemi) console.error(`  ${p}`);
     console.error(
-      "Correggi il file, o se è un falso allarme aggiungi l'eccezione motivata in ~/.config/quantotorna/ammessi.txt.",
+      "Correggi il file, o se è un falso allarme aggiungi l'eccezione motivata in ../privata/ammessi.txt.",
     );
     process.exit(1);
   }
