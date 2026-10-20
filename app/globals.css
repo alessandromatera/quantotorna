@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+/*
+ * Palette dataviz di riferimento, validata per i daltonismi in entrambi i
+ * modi. I ruoli sono variabili CSS: chiaro e scuro si scambiano qui, i
+ * componenti usano solo i ruoli.
+ */
+:root {
+  color-scheme: light;
+  --sfondo: #f4f6f8;
+  --superficie: #ffffff;
+  --inchiostro: #17243a;
+  --inchiostro-2: #536078;
+  --inchiostro-muto: #657186;
+  --griglia: #e8edf3;
+  --asse: #c3c2b7;
+  --bordo: #dfe5ed;
+  --accento-tenue: #eaf1fc;
+  --serie-1: #2a78d6;
+  --serie-2: #eb6834;
+  --serie-3: #1baf7a;
+  --serie-4: #eda100;
+  --serie-5: #e87ba4;
+  --serie-6: #008300;
+  --serie-7: #4a3aa7;
+  --serie-8: #e34948;
+  --stato-ok: #0ca30c;
+  --stato-avviso: #fab219;
+  --stato-serio: #ec835a;
+  --stato-critico: #d03b3b;
+  --delta-buono: #006300;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --sfondo: #101722;
+    --superficie: #182231;
+    --inchiostro: #edf2fa;
+    --inchiostro-2: #bac6d9;
+    --inchiostro-muto: #98a8bf;
+    --griglia: #283447;
+    --asse: #383835;
+    --bordo: #2c3b50;
+    --accento-tenue: #203655;
+    --serie-1: #3987e5;
+    --serie-2: #d95926;
+    --serie-3: #199e70;
+    --serie-4: #c98500;
+    --serie-5: #d55181;
+    --serie-6: #008300;
+    --serie-7: #9085e9;
+    --serie-8: #e66767;
+    --delta-buono: #0ca30c;
+  }
+}
+
+body {
+  background: var(--sfondo);
+  color: var(--inchiostro);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Colonne numeriche allineate (tabelle, assi). */
+.cifre-tabellari {
+  font-variant-numeric: tabular-nums;
+}
+
+.contenuto-pagina { max-width: 1560px; margin: auto; padding: 24px 16px 80px; }
+.tabella-scroll { max-height: 72vh; scrollbar-width: thin; }
+.tabella-scroll.tabella-intera { max-height: none; }
+.tabella-scroll th { white-space: nowrap; }
+.tabella-scroll td { padding-top: 12px; padding-bottom: 12px; }
+.tabella-scroll tbody tr:hover { background: color-mix(in srgb, var(--accento-tenue) 45%, transparent); }
+.salta-contenuto { position: fixed; top: -80px; left: 16px; z-index: 100; background: var(--superficie); padding: 12px; border: 2px solid var(--serie-1); }
+.salta-contenuto:focus { top: 12px; }
+:focus-visible { outline: 2px solid var(--serie-1); outline-offset: 3px; }
+button, a, summary { -webkit-tap-highlight-color: transparent; }
+.statistica-valore { font-size: clamp(1rem, 1.65vw, 1.5rem); }
+@media (min-width: 1024px) {
+  .contenuto-pagina { padding: 30px 32px 64px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}

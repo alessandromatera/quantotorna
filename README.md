@@ -4,14 +4,27 @@ Quanto torna davvero un titolo di Stato se lo tieni fino a scadenza: il
 rendimento netto secondo il fisco italiano e la cifra finale in euro, per i
 titoli quotati sul MOT di Borsa Italiana.
 
-Il progetto è all'inizio: c'è il motore di calcolo con i suoi test e il
-controllo che impedisce di pubblicare dati personali. La pagina arriverà
-dopo.
+Sito statico (Next.js in esportazione statica): i conti della tabella si
+fanno alla compilazione, quelli che dipendono da chi guarda — nominale,
+prezzo, commissioni, zainetto — nel suo browser, con le stesse funzioni. Non
+c'è un server, né cookie, né statistiche di visita.
 
 ```sh
 npm ci
 npm test
+npm run scarica   # scarica i dati del giorno in dati/catalogo.json (un minuto)
+npm run build     # compila il sito in out/
+npm run dev       # oppure: il sito in sviluppo su http://localhost:3000
 ```
+
+Lo scaricamento va lanciato dopo la chiusura del MOT (17:30): prima, l'ultimo
+prezzo è quello della seduta in corso. Il primo giro trova i dati di
+emissione solo per i titoli italiani dell'anno; gli altri si leggono da
+onvista, quaranta al giorno (`npm run scarica -- --onvista 700` li prende
+tutti in una volta).
+
+Come si fanno i conti, con le semplificazioni dichiarate e le verifiche:
+`app/metodologia/page.tsx`, la pagina «Metodologia» del sito.
 
 ## Per chi contribuisce
 
