@@ -4,8 +4,14 @@ Quanto torna davvero un titolo di Stato se lo tieni fino a scadenza: il
 rendimento netto secondo il fisco italiano e la cifra finale in euro, per i
 titoli quotati sul MOT di Borsa Italiana.
 
-Il progetto è all'inizio: qui c'è per ora solo il controllo che impedisce di
-pubblicare dati personali. Il motore di calcolo arriverà dopo.
+Il progetto è all'inizio: c'è il motore di calcolo con i suoi test e il
+controllo che impedisce di pubblicare dati personali. La pagina arriverà
+dopo.
+
+```sh
+npm ci
+npm test
+```
 
 ## Per chi contribuisce
 
