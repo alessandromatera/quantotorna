@@ -11,9 +11,10 @@ import type { TipoCatalogo } from "../categorie";
  *    scadenza rimborsano 100, quindi generano una minusvalenza CERTA che
  *    alimenta lo zainetto invece di consumarlo. È l'altra faccia della
  *    plusvalenza dei titoli sotto la pari.
- * 2. Se quel differenziale tocca davvero lo zainetto. Sugli strip no: è
- *    scarto di emissione, reddito di capitale, e resta fuori qualunque cosa
- *    ci sia nello zainetto.
+ * 2. Se quel differenziale tocca davvero lo zainetto. Sugli strip italiani
+ *    no: è scarto di emissione, reddito di capitale, e resta fuori qualunque
+ *    cosa ci sia nello zainetto. Sui BOT dipende dai dati d'asta (vedi
+ *    `plusCompensabile`).
  *
  * Modulo puro, senza dipendenze dalla UI.
  */
@@ -44,6 +45,14 @@ const BANDA_PARI = 0.25;
 export function descriviTitolo(t: {
   tipo: TipoCatalogo;
   prezzo: number;
+  /**
+   * Solo per BOT e zero coupon, dove dipende dai dati d'asta: true se la
+   * parte fra prezzo teorico e prezzo pagato è plusvalenza (BOT con prezzo e
+   * data di emissione, zero coupon esteri con il disaggio), false se tutto
+   * il differenziale è scarto. È `plusCompensabile` di lib/catalogo/metriche.ts.
+   * Senza, vale il modello semplificato: fuori dallo zainetto.
+   */
+  plusCompensabile?: boolean;
 }): DescrizioneTitolo {
   switch (t.tipo) {
     case "fisso":
@@ -61,19 +70,33 @@ export function descriviTitolo(t: {
         toccaZainetto: true,
       };
     case "zeroCoupon":
-      return {
-        famiglia: "Strip",
-        termine: "btpStrip",
-        nota: "Nessuna cedola: un solo incasso a scadenza. Il guadagno è scarto di emissione, tassato al 12,5% pieno e fuori dallo zainetto.",
-        toccaZainetto: false,
-      };
+      return t.plusCompensabile
+        ? {
+            famiglia: "Strip",
+            termine: "btpStrip",
+            nota: "Nessuna cedola: un solo incasso a scadenza. Il disaggio di emissione è tassato al 12,5%; la differenza fra prezzo teorico e prezzo pagato è plusvalenza o minusvalenza, e tocca lo zainetto.",
+            toccaZainetto: true,
+          }
+        : {
+            famiglia: "Strip",
+            termine: "btpStrip",
+            nota: "Nessuna cedola: un solo incasso a scadenza. Il guadagno è scarto di emissione, tassato al 12,5% pieno e fuori dallo zainetto.",
+            toccaZainetto: false,
+          };
     case "bot":
-      return {
-        famiglia: "BOT",
-        termine: "bot",
-        nota: "Scadenza breve e nessuna cedola: compri sotto 100 e ti rimborsano 100. Il guadagno è scarto di emissione, al 12,5% pieno e fuori dallo zainetto.",
-        toccaZainetto: false,
-      };
+      return t.plusCompensabile
+        ? {
+            famiglia: "BOT",
+            termine: "bot",
+            nota: "Scadenza breve e nessuna cedola: compri sotto 100 e ti rimborsano 100. Lo scarto di emissione è tassato al 12,5% in anticipo; la differenza fra prezzo teorico e prezzo pagato, di solito pochi euro, è plusvalenza o minusvalenza e tocca lo zainetto.",
+            toccaZainetto: true,
+          }
+        : {
+            famiglia: "BOT",
+            termine: "bot",
+            nota: "Scadenza breve e nessuna cedola: compri sotto 100 e ti rimborsano 100. Senza i dati d'asta il guadagno è trattato tutto come scarto di emissione: 12,5% pieno, fuori dallo zainetto.",
+            toccaZainetto: false,
+          };
     case "ccteu":
       return {
         famiglia: "CCTeu",

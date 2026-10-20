@@ -57,6 +57,23 @@ describe("descriviTitolo", () => {
     }
   });
 
+  /**
+   * Con prezzo e data d'asta lo scarto si tassa in anticipo, e la parte fra
+   * prezzo teorico e prezzo pagato è plusvalenza: la nota non può dire
+   * «fuori dallo zainetto» mentre il motore la compensa.
+   */
+  it("BOT e zero coupon con i dati d'asta toccano lo zainetto, e la nota lo dice", () => {
+    for (const tipo of ["bot", "zeroCoupon"] as const) {
+      const d = descriviTitolo({ tipo, prezzo: 98, plusCompensabile: true });
+      expect(d.toccaZainetto).toBe(true);
+      expect(d.nota).toMatch(/tocca lo zainetto/);
+      expect(d.nota).not.toMatch(/fuori dallo zainetto/);
+    }
+    expect(descriviTitolo({ tipo: "bot", prezzo: 98, plusCompensabile: false }).nota).toMatch(
+      /Senza i dati d'asta/,
+    );
+  });
+
   it("il CCTeu dichiara l'ipotesi sull'Euribor", () => {
     const d = descriviTitolo({ tipo: "ccteu", prezzo: 101.28 });
     expect(d.famiglia).toBe("CCTeu");
