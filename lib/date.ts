@@ -113,6 +113,20 @@ export function dataRegolamento(iso: string): string {
   return data;
 }
 
+/**
+ * Il giorno a cui appartengono gli ultimi prezzi del MOT letti il giorno
+ * dato, dopo la chiusura: lo stesso giorno, o il venerdì se è fine
+ * settimana. Le festività di Borsa non si contano: in quei giorni il prezzo
+ * è quello della seduta prima, con la data di oggi — un giorno di rateo,
+ * come per `dataRegolamento`.
+ */
+export function giornoDeiPrezzi(iso: string): string {
+  const giorno = giornoSettimana(iso);
+  if (giorno === 6) return aggiungiGiorni(iso, -1);
+  if (giorno === 0) return aggiungiGiorni(iso, -2);
+  return iso;
+}
+
 /** Data ISO → formato italiano gg/mm/aaaa (solo per la UI). */
 export function formatDataIT(iso: string): string {
   const [anno, mese, giorno] = iso.split("-");

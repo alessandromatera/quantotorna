@@ -7,6 +7,7 @@ import {
   dataRegolamento,
   formatDataIT,
   giorniTra,
+  giornoDeiPrezzi,
 } from "./date";
 
 describe("aritmetica sulle date ISO", () => {
@@ -51,6 +52,14 @@ describe("anniTraActAct", () => {
       -anniTraActAct("2026-03-01", "2027-03-01"),
     );
     expect(anniTraActAct("2026-03-01", "2026-09-01")).toBe(anniTra("2026-03-01", "2026-09-01"));
+  });
+});
+
+describe("giornoDeiPrezzi", () => {
+  it("nei giorni feriali è oggi, nel fine settimana il venerdì", () => {
+    expect(giornoDeiPrezzi("2026-10-20")).toBe("2026-10-20"); // martedì
+    expect(giornoDeiPrezzi("2026-10-24")).toBe("2026-10-23"); // sabato → venerdì
+    expect(giornoDeiPrezzi("2026-10-25")).toBe("2026-10-23"); // domenica → venerdì
   });
 });
 

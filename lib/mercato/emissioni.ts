@@ -26,10 +26,15 @@ export function completa(r: EmissioneSalvata | undefined): boolean {
 }
 
 /**
- * Gli ISIN da chiedere a onvista in questo aggiornamento, al più `massimo`,
- * nell'ordine del catalogo: solo quelli senza dati completi. Un dato del MEF
- * non si chiede a nessun altro (la data, se manca, la dà Borsa Italiana); un
- * titolo già chiesto oggi senza successo aspetta domani.
+ * Gli ISIN da chiedere a onvista in questo aggiornamento, al più `massimo`:
+ * solo quelli senza dati completi. Un dato del MEF non si chiede a nessun
+ * altro (la data, se manca, la dà Borsa Italiana); un titolo già chiesto oggi
+ * senza successo aspetta domani.
+ *
+ * Prima i titoli mai chiesti, nell'ordine del catalogo, poi quelli chiesti
+ * invano, dal tentativo più vecchio. Nell'ordine del catalogo e basta, una
+ * quarantina di titoli che onvista non copre occuperebbero tutti i posti ogni
+ * giorno, e i nuovi non verrebbero chiesti mai.
  */
 export function daChiedereAOnvista(params: {
   catalogo: string[];
@@ -38,16 +43,22 @@ export function daChiedereAOnvista(params: {
   massimo: number;
 }): string[] {
   const { catalogo, salvate, oggi, massimo } = params;
-  const scelti: string[] = [];
+  const mai: string[] = [];
+  const falliti: { isin: string; quando: string }[] = [];
   for (const isin of catalogo) {
-    if (scelti.length >= massimo) break;
     const r = salvate.get(isin);
     if (completa(r)) continue;
     if (r?.fonte.startsWith(FONTE_MEF)) continue;
-    if (r && r.dataAggiornamento === oggi && r.fonte.includes("onvista")) continue;
-    scelti.push(isin);
+    if (!r) {
+      mai.push(isin);
+      continue;
+    }
+    if (r.dataAggiornamento === oggi && r.fonte.includes("onvista")) continue;
+    falliti.push({ isin, quando: r.dataAggiornamento });
   }
-  return scelti;
+  // `sort` è stabile: a pari data resta l'ordine del catalogo.
+  falliti.sort((a, b) => a.quando.localeCompare(b.quando));
+  return [...mai, ...falliti.map((f) => f.isin)].slice(0, massimo);
 }
 
 /**

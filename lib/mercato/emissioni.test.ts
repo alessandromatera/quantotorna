@@ -15,17 +15,37 @@ describe("daChiedereAOnvista", () => {
     ["MEF_SENZA_DATA", riga(FONTE_MEF, 99, null)],
     ["FALLITO_IERI", riga("onvista: prezzo di emissione non pubblicato", null, null)],
     ["FALLITO_OGGI", riga("onvista: prezzo di emissione non pubblicato", null, null, oggi)],
+    ["FALLITO_A_MAGGIO", riga("onvista: prezzo di emissione non pubblicato", null, null, "2026-05-02")],
   ]);
 
-  it("solo chi non ha dati completi, nell'ordine del catalogo", () => {
+  it("solo chi non ha dati completi: prima i mai chiesti, poi i falliti dal più vecchio", () => {
     const scelti = daChiedereAOnvista({
-      catalogo: ["NUOVO", "COMPLETO", "MEF_SENZA_DATA", "FALLITO_IERI", "FALLITO_OGGI", "ALTRO"],
+      catalogo: [
+        "NUOVO",
+        "COMPLETO",
+        "MEF_SENZA_DATA",
+        "FALLITO_IERI",
+        "FALLITO_OGGI",
+        "ALTRO",
+        "FALLITO_A_MAGGIO",
+      ],
       salvate,
       oggi,
       massimo: 40,
     });
     // Il MEF non si richiede altrove; chi ha fallito oggi aspetta domani.
-    expect(scelti).toEqual(["NUOVO", "FALLITO_IERI", "ALTRO"]);
+    expect(scelti).toEqual(["NUOVO", "ALTRO", "FALLITO_A_MAGGIO", "FALLITO_IERI"]);
+  });
+
+  /** Altrimenti i titoli che onvista non copre occuperebbero tutti i posti, ogni giorno. */
+  it("i falliti non tolgono il posto ai mai chiesti", () => {
+    const tutti = new Map<string, EmissioneSalvata>([
+      ["A", riga("onvista: non pubblicato", null, null)],
+      ["B", riga("onvista: non pubblicato", null, null)],
+    ]);
+    expect(
+      daChiedereAOnvista({ catalogo: ["A", "B", "C"], salvate: tutti, oggi, massimo: 1 }),
+    ).toEqual(["C"]);
   });
 
   it("rispetta il tetto", () => {
