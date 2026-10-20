@@ -1,0 +1,4 @@
+#!/bin/sh
+# Controllo meccanico dei dati personali sui file in stage.
+radice=$(git rev-parse --show-toplevel)
+exec node "$radice/scripts/controllo-privacy.mjs" --indice
