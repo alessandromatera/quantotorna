@@ -356,6 +356,30 @@ const FRAMMENTO_ESTERO = `
   <td>15/10/2026</td>
   <td></td>
 </tr>
+<tr>
+  <td><a href="/borsa/obbligazioni/mot/euro-obbligazioni/scheda/DE0001135085-MOTX.html?lang=it"><strong>DE0001135085 - </strong></a></td>
+  <td><span>Bund Lg28 Eur 4,75</span></td>
+  <td>102,78</td>
+  <td></td>
+  <td>04/07/2028</td>
+  <td></td>
+</tr>
+<tr>
+  <td><a href="/borsa/obbligazioni/mot/euro-obbligazioni/scheda/FR001400QCA1-MOTX.html?lang=it"><strong>FR001400QCA1 - </strong></a></td>
+  <td><span>Oatei Fx Jul43 Eur</span></td>
+  <td>74,51</td>
+  <td></td>
+  <td>25/07/2043</td>
+  <td></td>
+</tr>
+<tr>
+  <td><a href="/borsa/obbligazioni/mot/euro-obbligazioni/scheda/XS3262549754-MOTX.html?lang=it"><strong>XS3262549754 - </strong></a></td>
+  <td><span>Eni Spa Mc Perpetual Sub Call Eur</span></td>
+  <td></td>
+  <td>1,017</td>
+  <td></td>
+  <td></td>
+</tr>
 </table>`;
 
 describe("parseListaBtp sul listino estero", () => {
@@ -371,8 +395,20 @@ describe("parseListaBtp sul listino estero", () => {
     expect(esito.righe.map((r) => r.isin).sort()).toEqual([
       "DE0001030583",
       "DE0001102614",
+      "DE0001135085",
       "ES00000128P6",
     ]);
+  });
+
+  /** Rilevato il 20/10/2026: quindici titoli scartati per una cedola che c'era. */
+  it("legge la cedola in fondo al nome, senza il «%», quando la colonna è vuota", () => {
+    expect(per("DE0001135085")).toMatchObject({ cedolaAnnua: 4.75, emittente: "DE", tipo: "fisso" });
+    // Senza numero da nessuna parte resta scartato: meglio fuori che inventato.
+    expect(scarto("FR001400QCA1")!.motivo).toMatch(/cedola non riconosciuta/);
+  });
+
+  it("un perpetuo si scarta dicendo che non ha scadenza", () => {
+    expect(scarto("XS3262549754")!.motivo).toMatch(/senza data di scadenza/);
   });
 
   /**

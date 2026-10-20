@@ -14,7 +14,7 @@ npm ci
 npm test
 npm run scarica   # scarica i dati del giorno in dati/catalogo.json (un minuto)
 npm run build     # compila il sito in out/
-npm run dev       # oppure: il sito in sviluppo su http://localhost:3000
+npm run dev       # oppure: il sito in sviluppo su http://localhost:3100
 ```
 
 Lo scaricamento va lanciato dopo la chiusura del MOT (17:30): prima, l'ultimo

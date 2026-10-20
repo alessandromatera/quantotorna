@@ -276,8 +276,16 @@ export function parseListaBtp(
     const prezzo = celle[2] ? numeroFlessibile(celle[2]) : null;
     const scadenzaIT = celle[4]?.match(/(\d{2})\/(\d{2})\/(\d{4})/);
 
-    if (!nome || !scadenzaIT) {
+    if (!nome) {
       scartate.push({ isin, motivo: "colonne non riconosciute" });
+      continue;
+    }
+    // Con il nome ma senza scadenza sono i perpetui (Eni, Enel «Perpetual
+    // Sub Call», rilevati il 20/10/2026): niente data di rimborso, niente
+    // rendimento a scadenza. Se fosse la pagina a essere cambiata, mancherebbe
+    // la scadenza su tutte le righe e il listino fallirebbe per intero.
+    if (!scadenzaIT) {
+      scartate.push({ isin, motivo: `senza data di scadenza (${nome}): il motore calcola solo titoli che rimborsano a una data` });
       continue;
     }
     // Sul listino estero l'emittente NON si indovina: è lui a decidere se il
@@ -342,7 +350,12 @@ export function parseListaBtp(
       continue;
     }
     const senzaCedola = tipo === "zeroCoupon" || tipo === "bot" || tipo === "ccteu";
-    const dalNome = nome.match(/([\d,.]+)\s*%/)?.[1];
+    // Sul listino estero alcuni nomi portano la cedola in fondo e senza il
+    // «%», con la colonna vuota: «Bund Lg28 Eur 4,75», «Oat Apr35 Eur 4,75»,
+    // «Eib Mz42 Eur 3,625» (quindici titoli il 20/10/2026, prima scartati).
+    const dalNome =
+      nome.match(/([\d,.]+)\s*%/)?.[1] ??
+      (estero ? nome.match(/\bEur\s+(\d+(?:[.,]\d+)?)$/i)?.[1] : undefined);
     // La colonna cedola segue la convenzione dell'emittente: di PERIODO sui
     // titoli italiani (semestrale, da raddoppiare) e già ANNUA su quelli
     // esteri, che pagano una volta l'anno. Applicare il × 2 anche lì

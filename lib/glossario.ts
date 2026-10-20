@@ -114,10 +114,20 @@ export const GLOSSARIO: Record<string, VoceGlossario> = {
     testo:
       "Titoli di Stato di paesi in «white list» — Germania (Bund, Bobl, Schatz), Spagna (Bonos, Obligaciones), Austria, Belgio: in Italia sono tassati al 12,5% come i BTP. Attenzione: NON sono la stessa cosa dei titoli di agenzie pubbliche di quei paesi (per esempio KfW in Germania), che invece vanno al 26%. Rendono meno di un BTP di pari scadenza, e quella differenza è il premio che il mercato chiede per il rischio Italia.",
   },
+  zeroCoupon: {
+    titolo: "Zero coupon",
+    testo:
+      "Un titolo senza cedole: lo compri sotto 100 e a scadenza ti rimborsano 100, e il guadagno è tutto in quella differenza. Sul MOT sono gli strip di BTP e gli zero coupon di Stati esteri e organismi sovranazionali (BEI, MES). Per il fisco la parte fino al prezzo teorico è disaggio di emissione, al 12,5%; quella fra prezzo teorico e prezzo pagato è plusvalenza o minusvalenza. Sugli strip italiani, e dove mancano i dati di emissione, tutto il guadagno è trattato come scarto, fuori dallo zainetto.",
+  },
   btpStrip: {
     titolo: "Strip di BTP",
     testo:
       "Un BTP a cui sono state staccate le cedole: si compra solo il rimborso finale, sotto la pari, e non incassi nulla fino a scadenza. Attenzione al fisco: il guadagno è scarto di emissione, cioè reddito di capitale tassato al 12,5% pieno, e NON si compensa con le minusvalenze dello zainetto. Sono anche poco scambiati: molti non hanno un prezzo.",
+  },
+  indicizzatoEstero: {
+    titolo: "Titolo di Stato estero indicizzato",
+    testo:
+      "Come il BTP€i, ma di un altro Stato: Bund€i tedeschi, OAT€i francesi e Obligaciones€i spagnole seguono l'inflazione dell'area euro (HICP senza tabacchi), gli OATi francesi quella francese. La rivalutazione si accumula nel capitale e la incassi a scadenza; sul MOT è quotato al prezzo reale. Per il fisco italiano è al 12,5% come un BTP.",
   },
   btpIndicizzatoEuro: {
     titolo: "BTP€i",

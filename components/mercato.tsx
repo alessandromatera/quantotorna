@@ -341,15 +341,17 @@ function Identita({
   emittente,
   prezzo,
   isin,
+  nome,
   plusCompensabile,
 }: {
   tipo: TipoCatalogo;
   emittente: Emittente;
   prezzo: number;
   isin: string;
+  nome: string;
   plusCompensabile?: boolean;
 }) {
-  const d = descriviTitolo({ tipo, prezzo, plusCompensabile });
+  const d = descriviTitolo({ tipo, prezzo, plusCompensabile, emittente, nome });
   const e = DESCRIZIONI[emittente];
   return (
     <>
@@ -878,6 +880,7 @@ export function Mercato({
                         emittente={t.emittente}
                         prezzo={t.prezzo}
                         isin={t.isin}
+                        nome={t.nome}
                         plusCompensabile={t.plusCompensabile}
                       />
                     </Cella>
@@ -1033,7 +1036,7 @@ export function Mercato({
                   <LinkStrumento isin={t.isin} tipo={t.tipo} emittente={t.emittente} className="font-medium">
                     {t.nome}
                   </LinkStrumento>
-                  <Identita tipo={t.tipo} emittente={t.emittente} prezzo={t.prezzo} isin={t.isin} />
+                  <Identita tipo={t.tipo} emittente={t.emittente} prezzo={t.prezzo} isin={t.isin} nome={t.nome} />
                 </Cella>
                 <Cella>
                   <span className="cifre-tabellari">{formatDataIT(t.dataScadenza)}</span>
@@ -1086,8 +1089,8 @@ export function Mercato({
                 e mostrarlo sarebbe un numero sbagliato in una direzione sola. L'inflazione di
                 pareggio è confrontata con il <strong>{formatPct(condizioni.inflazioneAttesa)}</strong>{" "}
                 che ti aspetti (si cambia in «Le tue condizioni»): attenzione, i BTP€i seguono
-                l'HICP <em>dell'area euro</em> senza tabacchi, vicino ma non uguale
-                all'inflazione italiana. Nessun importo in euro: servirebbe il coefficiente di
+                l'HICP <em>dell'area euro</em> senza tabacchi (gli OATi quella francese), vicino ma
+                non uguale all'inflazione italiana. Nessun importo in euro: servirebbe il coefficiente di
                 indicizzazione del MEF, che il sito non scarica.
               </>
             }
@@ -1101,7 +1104,7 @@ export function Mercato({
                     <LinkStrumento isin={t.isin} tipo={t.tipo} emittente={t.emittente} className="font-medium">
                       {t.nome}
                     </LinkStrumento>
-                    <Identita tipo={t.tipo} emittente={t.emittente} prezzo={t.prezzo} isin={t.isin} />
+                    <Identita tipo={t.tipo} emittente={t.emittente} prezzo={t.prezzo} isin={t.isin} nome={t.nome} />
                   </Cella>
                   <Cella>
                     <span className="cifre-tabellari">{formatDataIT(t.dataScadenza)}</span>

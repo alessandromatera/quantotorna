@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { AUTORE, URL_CODICE } from "@/lib/sito";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -61,7 +62,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </p>
             <p>
               Niente cookie, niente statistiche di visita, niente account: quello che scrivi resta
-              nel tuo browser. Codice aperto con licenza AGPL-3.0.
+              nel tuo browser.{" "}
+              <a href={URL_CODICE} className="underline">
+                Codice aperto
+              </a>{" "}
+              con licenza AGPL-3.0, di {AUTORE}.
             </p>
           </div>
         </footer>

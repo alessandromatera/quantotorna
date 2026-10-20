@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { URL_CODICE } from "@/lib/sito";
 
 export const metadata: Metadata = {
   title: "Metodologia — quantotorna",
@@ -266,8 +267,12 @@ export default function Metodologia() {
 
       <Sezione titolo="Codice">
         <p>
-          Il codice è aperto, con licenza AGPL-3.0: motore, test, scaricamento e pagine. Chi lo
-          usa per offrire un servizio deve rendere disponibili anche le sue modifiche.
+          Il{" "}
+          <a href={URL_CODICE} className="underline">
+            codice
+          </a>{" "}
+          è aperto, con licenza AGPL-3.0: motore, test, scaricamento e pagine. Chi lo usa per
+          offrire un servizio deve rendere disponibili anche le sue modifiche.
         </p>
       </Sezione>
     </article>

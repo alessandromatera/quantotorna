@@ -74,6 +74,27 @@ describe("descriviTitolo", () => {
     );
   });
 
+  it("«Strip» solo per gli italiani: gli zero coupon esteri si chiamano col loro nome", () => {
+    expect(descriviTitolo({ tipo: "zeroCoupon", prezzo: 90, emittente: "IT" }).famiglia).toBe("Strip");
+    const bei = descriviTitolo({ tipo: "zeroCoupon", prezzo: 90, emittente: "sovra" });
+    expect(bei.famiglia).toBe("Zero coupon");
+    expect(bei.nota).toMatch(/Senza prezzo e data di emissione/);
+    expect(GLOSSARIO[bei.termine]).toBeDefined();
+    expect(descriviTitolo({ tipo: "zeroCoupon", prezzo: 100 }).famiglia).toBe("Strip e zero coupon");
+  });
+
+  it("«BTP€i» solo per gli italiani, e gli OATi seguono l'inflazione francese", () => {
+    expect(descriviTitolo({ tipo: "indicizzatoEuro", prezzo: 99, emittente: "IT" }).famiglia).toBe("BTP€i");
+    const bund = descriviTitolo({ tipo: "indicizzatoEuro", prezzo: 99, emittente: "DE", nome: "Bundei 0,5% Ap30 Eur" });
+    expect(bund.famiglia).toBe("Indicizzato");
+    expect(bund.nota).toMatch(/area euro/);
+    expect(GLOSSARIO[bund.termine]).toBeDefined();
+    const oati = descriviTitolo({ tipo: "indicizzatoEuro", prezzo: 99, emittente: "FR", nome: "Oati Lug29 Eur 3,4" });
+    expect(oati.nota).toMatch(/inflazione francese/);
+    const oatei = descriviTitolo({ tipo: "indicizzatoEuro", prezzo: 99, emittente: "FR", nome: "Oatei Lug32 Eur 3,15" });
+    expect(oatei.nota).toMatch(/area euro/);
+  });
+
   it("il CCTeu dichiara l'ipotesi sull'Euribor", () => {
     const d = descriviTitolo({ tipo: "ccteu", prezzo: 101.28 });
     expect(d.famiglia).toBe("CCTeu");

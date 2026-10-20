@@ -6,6 +6,14 @@
  *   node scripts/controllo-privacy.mjs --commit <sha> [...]  commit da pubblicare (pre-push)
  *   node scripts/controllo-privacy.mjs --cartella out        sito compilato
  *
+ * Sul sito compilato non si cercano le voci fatte solo di cifre (importi,
+ * prezzi di carico): lì ogni numero viene dai prezzi di mercato, e su
+ * migliaia di importi calcolati ogni giorno qualcuno coincide per caso con
+ * una voce della lista (il 20/10/2026: pezzi di ISIN, metriche su 10.000
+ * nominali, le cifre di ln(10) dentro una libreria). Un importo dell'autore
+ * può arrivare nel sito solo dal codice, che pre-commit e pre-push
+ * controllano con tutte le voci; chi compila il sito non ha la lista.
+ *
  * Legge, FUORI dalla repo, in ~/.config/quantotorna/:
  * - `dati-personali.txt`: una voce per riga (# per i commenti). Ogni
  *   occorrenza, maiuscole o minuscole, ferma tutto;
@@ -93,6 +101,8 @@ function caricaConfigurazione() {
 }
 
 const problemi = [];
+/** Voci numeriche non cercate (solo con --cartella), per dirlo. */
+let saltateNumeriche = 0;
 
 /** Ogni voce della lista trovata nel testo, con la riga, salvo le eccezioni. */
 function cerca(config, percorso, testo) {
@@ -170,7 +180,13 @@ function controllaCommit(config, commit) {
   return file;
 }
 
+/** Voce fatta solo di cifre e separatori: un importo, non un nome. */
+const NUMERICA = /^[\d\s.,'€%+-]+$/;
+
 function controllaCartella(config, cartella) {
+  const soloTesto = { ...config, voci: config.voci.filter((v) => !NUMERICA.test(v)) };
+  saltateNumeriche = config.voci.length - soloTesto.voci.length;
+  config = soloTesto;
   let file = 0;
   const visita = (dir) => {
     for (const voce of readdirSync(dir)) {
@@ -209,6 +225,11 @@ function main() {
     process.exit(2);
   }
 
+  if (saltateNumeriche > 0) {
+    console.error(
+      `controllo-privacy: ${saltateNumeriche} voci numeriche non cercate nel sito compilato: i suoi numeri vengono dai prezzi di mercato, e quelli dell'autore possono arrivarci solo dal codice, che pre-commit e pre-push controllano.`,
+    );
+  }
   if (config.corte.length > 0) {
     console.error(
       `controllo-privacy: ${config.corte.length} voci più corte di ${LUNGHEZZA_MINIMA} caratteri ignorate: sono compito dell'agente.`,

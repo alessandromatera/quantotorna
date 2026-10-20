@@ -53,6 +53,14 @@ export function descriviTitolo(t: {
    * Senza, vale il modello semplificato: fuori dallo zainetto.
    */
   plusCompensabile?: boolean;
+  /**
+   * Per zero coupon e indicizzati: «Strip» e «BTP€i» sono nomi dei titoli
+   * italiani, e gli esteri si chiamano col loro. Senza, l'etichetta li dice
+   * entrambi (i chip dei filtri).
+   */
+  emittente?: string;
+  /** Il nome del listino: dice quale inflazione segue un indicizzato francese. */
+  nome?: string;
 }): DescrizioneTitolo {
   switch (t.tipo) {
     case "fisso":
@@ -69,20 +77,29 @@ export function descriviTitolo(t: {
         nota: `Cedola crescente a gradini, già contata tutta nel rendimento; il premio fedeltà non spetta a chi compra sul mercato. ${notaDifferenziale(t.prezzo)}`,
         toccaZainetto: true,
       };
-    case "zeroCoupon":
-      return t.plusCompensabile
-        ? {
-            famiglia: "Strip",
-            termine: "btpStrip",
-            nota: "Nessuna cedola: un solo incasso a scadenza. Il disaggio di emissione è tassato al 12,5%; la differenza fra prezzo teorico e prezzo pagato è plusvalenza o minusvalenza, e tocca lo zainetto.",
-            toccaZainetto: true,
-          }
-        : {
-            famiglia: "Strip",
-            termine: "btpStrip",
-            nota: "Nessuna cedola: un solo incasso a scadenza. Il guadagno è scarto di emissione, tassato al 12,5% pieno e fuori dallo zainetto.",
-            toccaZainetto: false,
-          };
+    case "zeroCoupon": {
+      const nome =
+        t.emittente == null
+          ? { famiglia: "Strip e zero coupon", termine: "zeroCoupon" }
+          : t.emittente === "IT"
+            ? { famiglia: "Strip", termine: "btpStrip" }
+            : { famiglia: "Zero coupon", termine: "zeroCoupon" };
+      if (t.plusCompensabile) {
+        return {
+          ...nome,
+          nota: "Nessuna cedola: un solo incasso a scadenza. Il disaggio di emissione è tassato al 12,5%; la differenza fra prezzo teorico e prezzo pagato è plusvalenza o minusvalenza, e tocca lo zainetto.",
+          toccaZainetto: true,
+        };
+      }
+      return {
+        ...nome,
+        nota:
+          t.emittente != null && t.emittente !== "IT"
+            ? "Nessuna cedola: un solo incasso a scadenza. Senza prezzo e data di emissione il guadagno è trattato tutto come scarto di emissione: 12,5% pieno, fuori dallo zainetto."
+            : "Nessuna cedola: un solo incasso a scadenza. Il guadagno è scarto di emissione, tassato al 12,5% pieno e fuori dallo zainetto.",
+        toccaZainetto: false,
+      };
+    }
     case "bot":
       return t.plusCompensabile
         ? {
@@ -104,13 +121,20 @@ export function descriviTitolo(t: {
         nota: "Cedola variabile, agganciata all'Euribor a 6 mesi: sale se salgono i tassi. Il rendimento a scadenza suppone che l'Euribor resti quello di oggi.",
         toccaZainetto: true,
       };
-    case "indicizzatoEuro":
+    case "indicizzatoEuro": {
+      // Gli OATi seguono i prezzi francesi; gli OAT€i, i Bund€i, le
+      // Obligaciones€i e i BTP€i l'HICP dell'area euro, sempre senza tabacchi.
+      const francese = /^oati\b/i.test(t.nome?.trim() ?? "");
       return {
-        famiglia: "BTP€i",
-        termine: "btpIndicizzatoEuro",
-        nota: "Il capitale si rivaluta con l'inflazione dell'area euro e la rivalutazione la incassi a scadenza; prezzo e cedola qui accanto sono già al netto di quella maturata.",
+        ...(t.emittente == null
+          ? { famiglia: "BTP€i ed esteri", termine: "indicizzatoEstero" }
+          : t.emittente === "IT"
+            ? { famiglia: "BTP€i", termine: "btpIndicizzatoEuro" }
+            : { famiglia: "Indicizzato", termine: "indicizzatoEstero" }),
+        nota: `Il capitale si rivaluta con l'inflazione ${francese ? "francese" : "dell'area euro"} e la rivalutazione la incassi a scadenza; prezzo e cedola qui accanto sono già al netto di quella maturata.`,
         toccaZainetto: true,
       };
+    }
     case "italia":
       return {
         famiglia: "BTP Italia",
