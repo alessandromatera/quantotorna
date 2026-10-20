@@ -223,6 +223,14 @@ export default function Metodologia() {
           </li>
         </Elenco>
         <p>
+          Il catalogo del giorno, con tutti questi dati e senza nessun numero calcolato, è
+          pubblicato così com'è in{" "}
+          <a href="/dati/catalogo.json" className="underline">
+            /dati/catalogo.json
+          </a>
+          : il formato è descritto nel codice, in <code>lib/catalogo/formato.ts</code>.
+        </p>
+        <p>
           Tutto si scarica una volta al giorno, dopo la chiusura. Se una pagina dei listini cambia
           forma lo scaricamento fallisce e il sito resta quello del giorno prima: mai un elenco a
           metà presentato come completo. Se manca una delle altre fonti il sito si aggiorna lo

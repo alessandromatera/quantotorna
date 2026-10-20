@@ -1,0 +1,102 @@
+# Il sito su GitHub Pages: il giro di ogni giorno feriale e ogni push su main.
+#
+# - Giro del giorno (orario, o lanciato a mano): riscarica dal sito il
+#   catalogo di ieri, che è la memoria dello scaricamento (dati di emissione,
+#   piani degli step-up, documenti del MEF già letti), scarica i dati di
+#   oggi, compila e pubblica. Se i listini non si leggono, lo scaricamento
+#   esce con 1: il sito resta quello di ieri e GitHub lo segnala per email.
+#   Il rinnovo dei dati non tocca il codice e non chiede conferma.
+# - Push su main: test, poi ricompila col catalogo già pubblicato, senza
+#   riscaricare niente.
+# - Primo giro, quando il sito non c'è ancora: a mano, con «da zero» e
+#   onvista a 700, per avere subito i dati di emissione.
+#
+# Su una repo pubblica GitHub sospende gli orari dopo 60 giorni senza
+# attività nella repo: il giro quotidiano non fa commit, quindi va
+# riattivato dalla scheda Actions se in due mesi non si tocca il codice.
+
+name: sito
+
+on:
+  schedule:
+    # 17:00 UTC: le 18 in inverno e le 19 d'estate a Roma, dopo la chiusura
+    # del MOT (17:30) e il quarto d'ora di ritardo dei prezzi di Borsa
+    # Italiana. GitHub può partire con qualche decina di minuti di ritardo.
+    - cron: "0 17 * * 1-5"
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      da_zero:
+        description: "Senza il catalogo di ieri: solo il primo giro, o dopo un cambio di formato"
+        type: boolean
+        default: false
+      onvista:
+        description: "Schede onvista da leggere (vuoto: 40, come ogni giorno)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un giro alla volta, e quello in corso non si interrompe: un catalogo
+# scritto a metà non si pubblica.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  compila:
+    runs-on: ubuntu-latest
+    env:
+      # Le date dei conti sono quelle italiane (`giornoDeiPrezzi`).
+      TZ: Europe/Rome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # Solo sul codice nuovo: un test che dipende dalla data non deve
+      # fermare il rinnovo dei dati.
+      - name: Test
+        if: github.event_name == 'push'
+        run: npm test
+
+      - name: Catalogo di ieri, dal sito
+        if: ${{ !inputs.da_zero }}
+        run: |
+          mkdir -p dati
+          curl --fail --silent --show-error --location --retry 3 \
+            https://quantotorna.it/dati/catalogo.json -o dati/catalogo.json
+
+      - name: Dati di oggi
+        if: github.event_name != 'push'
+        env:
+          DA_ZERO: ${{ inputs.da_zero }}
+          ONVISTA: ${{ inputs.onvista }}
+        run: |
+          argomenti=()
+          if [ "$DA_ZERO" = "true" ]; then argomenti+=(--da-zero); fi
+          if [ -n "$ONVISTA" ]; then argomenti+=(--onvista "$ONVISTA"); fi
+          npm run scarica -- "${argomenti[@]}"
+
+      - run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  pubblica:
+    needs: compila
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pubblicazione.outputs.page_url }}
+    steps:
+      - id: pubblicazione
+        uses: actions/deploy-pages@v4
