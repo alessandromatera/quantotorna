@@ -13,6 +13,7 @@ import {
   flussiLordi,
   prezzoTeorico,
   tir,
+  type Flusso,
   type ParametriBond,
 } from "./ytm";
 
@@ -42,11 +43,14 @@ import {
  *   spostamento indicato. È una semplificazione — la curva non si muove
  *   parallela — ma su un singolo titolo ciò che conta è il punto di curva
  *   del titolo stesso, e per quello l'errore è contenuto;
- * - le cedole incassate NON sono reinvestite: restano liquide a zero. È la
- *   differenza con lo YTM, che invece presuppone di reinvestirle tutte al
- *   tasso dello YTM stesso, e su una scadenza lunga non è un dettaglio —
- *   sul BTP 2050 vale quasi un punto l'anno. Il numero qui è quello che si
- *   incassa davvero senza fare altro;
+ * - gli euro sono quelli che si incassano davvero senza fare altro: le
+ *   cedole restano liquide, non si reinvestono. Il rendimento annuo invece è
+ *   il tasso interno dei flussi, la stessa misura dello YTM: ogni cedola
+ *   conta nel giorno in cui arriva. Così a scadenza, coi tassi fermi,
+ *   coincide con lo YTM netto della tabella. Annualizzare il solo incasso
+ *   finale, come se le cedole arrivassero tutte all'uscita, dava sul BTP
+ *   2033 il 3,42% contro il 3,67% della tabella, e si leggeva come un
+ *   errore;
  * - stesse convenzioni fiscali di ytm.ts: su un acquisto l'imposta sul rateo
  *   è stornata subito nell'esborso; il
  *   disaggio di emissione maturato fino all'uscita è reddito di capitale
@@ -139,8 +143,10 @@ export interface EsitoUscita {
   /** Centesimi con segno: incassoNetto − esborso. */
   guadagnoNetto: Centesimi;
   /**
-   * Rendimento netto annualizzato composto. null sotto il mese: su pochi
-   * giorni l'annualizzazione trasforma il rumore in un tasso a tre cifre.
+   * Rendimento netto annuo: il tasso interno dei flussi netti (cedole nei
+   * loro giorni, tutto il resto all'uscita) sull'esborso, come lo YTM. null
+   * sotto il mese: su pochi giorni l'annualizzazione trasforma il rumore in
+   * un tasso a tre cifre.
    */
   rendimentoAnnuoPct: number | null;
 }
@@ -291,6 +297,10 @@ export function simulaUscita(par: ParametriUscita): EsitoUscita | null {
     impostaDisaggio -
     (tassazione?.imposta ?? 0);
   const guadagnoNetto = incassoNetto - esborso;
+  const rendimentoAnnuo =
+    giorniTra(bond.dataRiferimento, dataUscita) < GIORNI_MIN_ANNUALIZZAZIONE
+      ? null
+      : tir(flussiNettiUscita(bond, dataUscita, incassoNetto), esborso, bond.dataRiferimento);
 
   return {
     dataUscita,
@@ -319,12 +329,40 @@ export function simulaUscita(par: ParametriUscita): EsitoUscita | null {
       : null,
     incassoNetto,
     guadagnoNetto,
-    rendimentoAnnuoPct:
-      giorniTra(bond.dataRiferimento, dataUscita) < GIORNI_MIN_ANNUALIZZAZIONE ||
-      esborso <= 0
-        ? null
-        : Math.round(((incassoNetto / esborso) ** (1 / anni) - 1) * 10000) / 100,
+    rendimentoAnnuoPct: rendimentoAnnuo == null ? null : Math.round(rendimentoAnnuo * 10000) / 100,
   };
+}
+
+/**
+ * I flussi netti di un'uscita, nei loro giorni: ogni cedola staccata prima
+ * dell'uscita al netto del suo 12,5%, e all'uscita tutto il resto
+ * dell'incasso netto (vendita o rimborso, rateo, la cedola di quel giorno,
+ * meno le altre imposte). La somma è sempre `incassoNetto`: cambia solo
+ * quando arriva ogni euro.
+ */
+function flussiNettiUscita(
+  bond: ParametriBond,
+  dataUscita: string,
+  incassoNetto: Centesimi,
+): Flusso[] {
+  const cedole = cedoleLordeTra(
+    {
+      quantita: bond.quantita,
+      cedolaAnnua: bond.cedolaAnnua,
+      frequenzaCedola: bond.frequenzaCedola,
+      dataScadenza: bond.dataScadenza,
+      gradini: bond.gradiniCedola,
+    },
+    bond.dataRiferimento,
+    dataUscita,
+  )
+    .filter((c) => c.data < dataUscita)
+    .map((c) => ({
+      data: c.data,
+      importo: c.importo - arrotondaCentesimi(c.importo * ALIQUOTA_AGEVOLATA),
+    }));
+  const giaIncassato = cedole.reduce((somma, c) => somma + c.importo, 0);
+  return [...cedole, { data: dataUscita, importo: incassoNetto - giaIncassato }];
 }
 
 /** Sotto il mese l'annualizzazione dice più sul calendario che sul titolo. */

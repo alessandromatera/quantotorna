@@ -1,14 +1,54 @@
 # quantotorna
 
-Quanto torna davvero un titolo di Stato se lo tieni fino a scadenza: il
-rendimento netto secondo il fisco italiano e la cifra finale in euro, per i
-titoli quotati sul MOT di Borsa Italiana.
+**[quantotorna.it](https://quantotorna.it)** — quanto torna davvero un
+titolo di Stato se lo tieni fino a scadenza: il rendimento netto secondo il
+fisco italiano e la cifra finale in euro, per i titoli quotati sul MOT di
+Borsa Italiana.
 
-Sito statico (Next.js in esportazione statica): i conti della tabella si
-fanno alla compilazione, su 10.000 nominali e senza commissioni; quelli che
-dipendono da chi guarda — nominale e commissioni per la tabella, in più
-prezzo e zainetto per le simulazioni — nel suo browser, con le stesse
-funzioni. Non c'è un server, né cookie, né statistiche di visita.
+## Come funziona il sito
+
+Il rendimento che si legge di solito su un BTP è lordo, oppure netto solo a
+metà. quantotorna lo rifà con le regole del fisco italiano, titolo per
+titolo, e dice anche quanti euro si ritrovano a scadenza.
+
+- **La tabella**: tutti i titoli di Stato del MOT — BTP a tasso fisso e
+  step-up, BOT, strip, CCTeu, BTP€i e BTP Italia, titoli esteri della white
+  list e sovranazionali — con il rendimento netto e lordo a scadenza dove
+  si può calcolare (reale, sugli indicizzati), la plusvalenza a rimborso,
+  quanto si ritrova a scadenza ogni 10.000 € spesi, la duration e quanto il
+  titolo scambia davvero. Si filtra per famiglia, scadenza, emittente,
+  volatilità e scambi, e si ordina da ogni colonna.
+- **Le imposte**: 12,5% su cedole, rateo e disaggio di emissione;
+  plusvalenze e minusvalenze al 26% sul 48,08% della base, compensabili con
+  lo zainetto; lo storno dell'imposta sul rateo pagato all'acquisto; la
+  plusvalenza misurata dal prezzo teorico e non da 100. Ogni
+  semplificazione è scritta nella [metodologia](https://quantotorna.it/metodologia/).
+- **Un clic su un titolo** apre due conti: «Se lo compro», il conto del
+  regolamento col tuo nominale, il tuo prezzo e le tue commissioni; e «Se
+  esco prima», cosa resta in mano vendendo prima della scadenza, con i tassi
+  che salgono o scendono e il tuo zainetto fiscale.
+- **Le tue condizioni**: nominale e commissioni del tuo intermediario
+  valgono per la tabella e per i conti sotto ogni titolo; lo zainetto per
+  «Se esco prima». Si salvano nel tuo browser e non escono di lì.
+- **I dati**: prezzi di chiusura del MOT, scambi da Euronext, dati d'asta
+  dal MEF, Euribor dalla BCE, scaricati ogni giorno feriale dopo la chiusura
+  di Borsa; il sito si rigenera da solo. Si possono scaricare il catalogo
+  del giorno ([`/dati/catalogo.json`](https://quantotorna.it/dati/catalogo.json))
+  e le tabelle in Markdown ([`/rendimenti.md`](https://quantotorna.it/rendimenti.md));
+  per i modelli linguistici c'è [`/llms.txt`](https://quantotorna.it/llms.txt).
+
+Non è consulenza finanziaria: i numeri sono forniti così come sono, e prima
+di comprare va controllato il conto del proprio intermediario.
+
+## Come è fatto
+
+Sito statico (Next.js in esportazione statica) su GitHub Pages, rigenerato
+ogni sera da GitHub Actions (`.github/workflows/sito.yml`): i conti della
+tabella si fanno alla compilazione, su 10.000 nominali e senza commissioni;
+quelli che dipendono da chi guarda — nominale e commissioni per la tabella,
+in più prezzo e zainetto per le simulazioni — nel suo browser, con le
+stesse funzioni. Il motore (`lib/`) è fatto di funzioni pure con i loro
+test. Non c'è un server, né cookie, né statistiche di visita.
 
 ```sh
 npm ci
@@ -35,27 +75,16 @@ Come si fanno i conti, con le semplificazioni dichiarate e le verifiche:
 
 ## Per chi contribuisce
 
-Prima di tutto attiva gli hook:
-
-```sh
-git config core.hooksPath scripts/hooks
-```
-
-- a ogni commit, `scripts/controllo-privacy.mjs` cerca nei file in stage le
-  voci di una lista di dati personali tenuta fuori dalla repo, in una
-  cartella `privata` accanto a lei;
-- a ogni push, lo stesso controllo sui commit che escono, poi l'agente
-  `guardiano-privacy` (`.claude/agents/`), che legge le modifiche e ferma
-  tutto se trova qualcosa che dice cosa possiede o fa chi scrive.
-
-Gli ISIN e i dati di mercato sono pubblici e passano; quantità, importi,
-conti, email private e percorsi locali no.
+Ogni numero viene dal motore in `lib/`, con i suoi test: una modifica ai
+conti porta con sé il test che la verifica, e `npm test` e `npm run
+typecheck` devono passare. Ogni semplificazione fiscale va dichiarata nel
+codice e nella pagina «Metodologia».
 
 Chi lavora con Claude Code committa con la skill `commit`
 (`.claude/skills/commit`): prima del commit fa girare test e typecheck, poi
-quattro agenti in parallelo sulle modifiche — dati personali, sicurezza,
-conti finanziari e fiscali, documentazione in linea col codice — e non
-committa finché uno di loro blocca.
+tre agenti in parallelo sulle modifiche — sicurezza, conti finanziari e
+fiscali, documentazione in linea col codice — e non committa finché uno di
+loro blocca.
 
 ## Licenza
 

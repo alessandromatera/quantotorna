@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import Link from "next/link";
 import { Navigazione } from "@/components/navigazione";
-import { AUTORE, URL_CODICE } from "@/lib/sito";
+import { AUTORE, OPEN_GRAPH_SITO, URL_CODICE, URL_SITO } from "@/lib/sito";
 import "./globals.css";
 
 /*
@@ -27,10 +27,23 @@ const mono = localFont({
   display: "swap",
 });
 
+/*
+ * Per i motori di ricerca e le anteprime: il titolo comincia con quello che
+ * si cerca, gli indirizzi sono quelli del dominio, e l'immagine la disegna
+ * app/anteprima.png/route.tsx.
+ */
+const TITOLO = "Rendimento netto di BTP, BOT e titoli di Stato — quantotorna";
+const DESCRIZIONE =
+  "Rendimento netto secondo il fisco italiano e cifra finale in euro per BTP, BOT, CCTeu e titoli di Stato esteri quotati sul MOT, tenuti fino a scadenza. Aggiornato ogni giorno.";
+
 export const metadata: Metadata = {
-  title: "quantotorna — quanto rende davvero un titolo di Stato",
-  description:
-    "Rendimento netto secondo il fisco italiano e cifra finale in euro, tenendo fino a scadenza i titoli di Stato quotati sul MOT.",
+  metadataBase: new URL(URL_SITO),
+  title: { default: TITOLO, template: "%s — quantotorna" },
+  description: DESCRIZIONE,
+  applicationName: "quantotorna",
+  authors: [{ name: AUTORE }],
+  openGraph: { ...OPEN_GRAPH_SITO, url: "/", title: TITOLO, description: DESCRIZIONE },
+  twitter: { card: "summary_large_image", images: OPEN_GRAPH_SITO.images },
 };
 
 export const viewport: Viewport = {

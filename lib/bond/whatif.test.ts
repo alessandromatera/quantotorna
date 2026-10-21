@@ -63,24 +63,24 @@ describe("simulaUscita", () => {
     expect(conAltroShock.incassoNetto).toBe(esito.incassoNetto);
   });
 
-  it("tenuto a scadenza rende MENO dello YTM: le cedole non si reinvestono", () => {
-    const esito = simulaUscita({ bond: LUNGO, dataUscita: "2060-01-01", shockPct: 0 })!;
-    expect(esito.dataUscita).toBe(LUNGO.dataScadenza);
-    // Lo YTM presuppone di reinvestire ogni cedola AL TASSO DELLO YTM stesso.
-    // Qui le cedole restano liquide, e su ventiquattro anni la differenza è
-    // circa un punto l'anno: non è uno scarto di arrotondamento, è l'ipotesi
-    // di reinvestimento che si vede in faccia.
-    const ytm = ytmNetto(LUNGO)! * 100;
-    expect(esito.rendimentoAnnuoPct!).toBeLessThan(ytm);
-    expect(ytm - esito.rendimentoAnnuoPct!).toBeGreaterThan(0.5);
+  it("a scadenza coi tassi fermi rende quanto lo YTM netto della tabella", () => {
+    // Il rendimento annuo è il tasso interno dei flussi, come lo YTM: ogni
+    // cedola conta nel giorno in cui arriva. Annualizzare il solo incasso
+    // finale dava su LUNGO quasi un punto in meno, e sembrava un errore.
+    for (const bond of [LUNGO, CORTO]) {
+      const esito = simulaUscita({ bond, dataUscita: "2060-01-01", shockPct: 0 })!;
+      expect(esito.dataUscita).toBe(bond.dataScadenza);
+      expect(Math.abs(esito.rendimentoAnnuoPct! - ytmNetto(bond)! * 100)).toBeLessThan(0.01);
+    }
   });
 
-  it("sul corto la stessa differenza si assottiglia: meno cedole da reinvestire", () => {
-    const lungo = simulaUscita({ bond: LUNGO, dataUscita: "2060-01-01", shockPct: 0 })!;
-    const corto = simulaUscita({ bond: CORTO, dataUscita: "2060-01-01", shockPct: 0 })!;
-    const scartoLungo = ytmNetto(LUNGO)! * 100 - lungo.rendimentoAnnuoPct!;
-    const scartoCorto = ytmNetto(CORTO)! * 100 - corto.rendimentoAnnuoPct!;
-    expect(scartoCorto).toBeLessThan(scartoLungo);
+  it("gli euro restano quelli incassati, senza reinvestire le cedole", () => {
+    // A scadenza il guadagno in euro è cedole nette più rimborso netto meno
+    // la spesa: non cresce con un reinvestimento che nessuno ha fatto.
+    const esito = simulaUscita({ bond: LUNGO, dataUscita: "2060-01-01", shockPct: 0 })!;
+    const reinvestito = esito.esborso * (1 + esito.rendimentoAnnuoPct! / 100) ** esito.anni;
+    expect(esito.incassoNetto).toBeLessThan(reinvestito);
+    expect(esito.guadagnoNetto).toBe(esito.incassoNetto - esito.esborso);
   });
 
   it("uscire in perdita crea capienza fiscale, non solo un rosso", () => {

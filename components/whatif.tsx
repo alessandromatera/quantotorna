@@ -216,9 +216,10 @@ export function CalcolatoreUscita({
         tiene dentro sia l'accorciarsi del titolo sia la risalita verso la
         pari. Lo spostamento dei tassi è <strong>parallelo</strong> e non
         distingue il rialzo generale dall'allargamento dello spread Italia.
-        Le cedole restano liquide: non sono reinvestite — ed è la ragione
-        principale per cui «a scadenza» qui rende meno dello YTM netto in
-        tabella, che invece le dà per reinvestite al tasso dello YTM stesso.
+        Gli euro sono quelli che incassi davvero: le cedole restano sul conto,
+        non si reinvestono. Il rendimento annuo è il tasso interno dei flussi,
+        come lo YTM: ogni cedola conta nel giorno in cui arriva, e «a
+        scadenza» coi tassi fermi rende quanto lo YTM netto in tabella.
         Commissioni di acquisto e vendita sono quelle della tariffa scelta in
         «Le tue condizioni»; al rimborso non se ne pagano.
       </p>

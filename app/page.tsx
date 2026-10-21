@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import { Mercato } from "@/components/mercato";
 import { Dati, Dato, Testata } from "@/components/ui";
 import { caricaCatalogo } from "@/lib/catalogo/file";
 import { metricheCatalogo } from "@/lib/catalogo/metriche";
 import { formatDataIT, formatMeseIT, formatPct } from "@/lib/client/format";
+import { AUTORE, URL_SITO } from "@/lib/sito";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 /**
  * La pagina dei titoli. Gira alla compilazione: legge il catalogo del
@@ -14,8 +20,54 @@ export default function Pagina() {
   const catalogo = caricaCatalogo();
   const metriche = metricheCatalogo(catalogo);
   const quanti = metriche.flussiNoti.length + metriche.variabili.length + metriche.indicizzati.length;
+  /*
+   * Per i motori di ricerca: il sito, e i numeri del giorno come insieme di
+   * dati (lo legge anche Google Dataset Search), con i due file da scaricare.
+   * Nessuna licenza dichiarata: i prezzi sono di Borsa Italiana.
+   */
+  const datiStrutturati = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${URL_SITO}/#sito`,
+        url: `${URL_SITO}/`,
+        name: "quantotorna",
+        inLanguage: "it",
+      },
+      {
+        "@type": "Dataset",
+        name: "Rendimenti netti dei titoli di Stato quotati sul MOT",
+        description: `Rendimento netto secondo il fisco italiano, YTM lordo e cifra finale in euro di ${quanti} titoli di Stato italiani, esteri e sovranazionali quotati sul MOT di Borsa Italiana, ai prezzi di chiusura del ${formatDataIT(catalogo.data)}. Aggiornato ogni giorno feriale.`,
+        url: `${URL_SITO}/`,
+        inLanguage: "it",
+        isAccessibleForFree: true,
+        dateModified: catalogo.data,
+        temporalCoverage: catalogo.data,
+        creator: { "@type": "Person", name: AUTORE },
+        includedInDataCatalog: { "@id": `${URL_SITO}/#sito` },
+        distribution: [
+          {
+            "@type": "DataDownload",
+            encodingFormat: "text/markdown",
+            contentUrl: `${URL_SITO}/rendimenti.md`,
+          },
+          {
+            "@type": "DataDownload",
+            encodingFormat: "application/json",
+            contentUrl: `${URL_SITO}/dati/catalogo.json`,
+          },
+        ],
+      },
+    ],
+  };
   return (
     <>
+      <script
+        type="application/ld+json"
+        // Come nella guida di Next: «<» scritto in modo che non possa chiudere lo script.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(datiStrutturati).replace(/</g, "\\u003c") }}
+      />
       <Testata
         titolo="Quanto torna davvero un titolo di Stato"
         sottotitolo={

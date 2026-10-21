@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Testata } from "@/components/ui";
-import { URL_CODICE } from "@/lib/sito";
+import { OPEN_GRAPH_SITO, URL_CODICE } from "@/lib/sito";
+
+const DESCRIZIONE =
+  "Come quantotorna calcola rendimento netto, imposte e cifra finale dei titoli di Stato: convenzioni, semplificazioni dichiarate, fonti e verifiche.";
 
 export const metadata: Metadata = {
-  title: "Metodologia — quantotorna",
-  description:
-    "Come quantotorna calcola rendimento netto, imposte e cifra finale dei titoli di Stato: convenzioni, semplificazioni dichiarate, fonti e verifiche.",
+  title: "Metodologia",
+  description: DESCRIZIONE,
+  alternates: { canonical: "/metodologia/" },
+  openGraph: {
+    ...OPEN_GRAPH_SITO,
+    url: "/metodologia/",
+    title: "Metodologia — quantotorna",
+    description: DESCRIZIONE,
+  },
 };
 
 /**
@@ -212,7 +221,9 @@ export default function Metodologia() {
             YTM lordo di oggi più lo spostamento dei tassi che scegli: non è la duration moltiplicata
             per lo spostamento, quindi tiene dentro l'accorciarsi del titolo e la risalita verso
             100. Lo spostamento è parallelo e non distingue i tassi in generale dallo spread
-            dell'Italia. Le cedole incassate non si reinvestono. Il conto fiscale è quello di una
+            dell'Italia. Gli euro sono quelli incassati, con le cedole che restano sul conto; il
+            rendimento annuo è il tasso interno dei flussi, come lo YTM, e a scadenza coi tassi
+            fermi coincide con quello della tabella. Il conto fiscale è quello di una
             vendita vera: imposta su cedole, rateo e disaggio maturato, plusvalenza o minusvalenza
             sul prezzo di acquisto, il tuo zainetto, le commissioni della tua tariffa.
           </p>
