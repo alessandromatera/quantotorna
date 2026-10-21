@@ -80,11 +80,13 @@ conti porta con sé il test che la verifica, e `npm test` e `npm run
 typecheck` devono passare. Ogni semplificazione fiscale va dichiarata nel
 codice e nella pagina «Metodologia».
 
-Chi lavora con Claude Code committa con la skill `commit`
-(`.claude/skills/commit`): prima del commit fa girare test e typecheck, poi
-tre agenti in parallelo sulle modifiche — sicurezza, conti finanziari e
-fiscali, documentazione in linea col codice — e non committa finché uno di
-loro blocca.
+- Codice, commenti e messaggi di commit in italiano.
+- Niente segreti nel codice, nei test o nei commit (token, chiavi,
+  password): gli esempi sono inventati.
+- I dati si scaricano una volta al giorno, con la fonte citata in pagina, e
+  niente book di negoziazione. Se una pagina delle fonti cambia, lo
+  scaricamento fallisce in modo visibile: mai dati parziali presentati come
+  completi.
 
 ## Licenza
 
