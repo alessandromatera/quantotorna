@@ -6,8 +6,7 @@ import { scadenzaMinusvalenza, type VoceZainetto } from "../tax/zainetto";
  * Le scelte di chi guarda: su quanto nominale fare la tabella e le
  * simulazioni, quanto si paga di commissioni, che minusvalenze ha da
  * compensare, che inflazione si aspetta.
- * Restano nel suo browser (localStorage) e non escono mai dalla pagina: il
- * sito non ha un server a cui mandarle.
+ * Restano nel suo browser (localStorage) e non escono mai dalla pagina.
  *
  * Modulo puro: la lettura è qui e testata, il salvataggio sta nel componente.
  */

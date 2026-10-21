@@ -33,7 +33,7 @@ import { useMemo, useState } from "react";
  * fino in fondo. Questo risponde all'altra, che su una scadenza lunga è
  * quella vera: se lo compro oggi, cosa ho in mano uscendo al momento X con i
  * tassi spostati di Y. Il motore è in `lib/bond/whatif.ts`, tutto puro e
- * tutto qui nel browser: nessuna chiamata a un server, lo slider ricalcola
+ * tutto qui nel browser: i conti non chiamano nessun server, lo slider ricalcola
  * mentre si muove.
  */
 

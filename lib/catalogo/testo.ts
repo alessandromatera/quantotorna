@@ -121,9 +121,9 @@ export function llmsTxt(m: MetricheCatalogo): string {
       `CCTeu, BTP€i e titoli di Stato esteri e sovranazionali: ${quanti} titoli, prezzi di ` +
       `chiusura del ${formatDataIT(m.data)}, aggiornati ogni giorno feriale.`,
     "",
-    "Sito statico in italiano, senza pubblicità, cookie né statistiche di visita, con il codice " +
-      "aperto. I conti li fa un motore di funzioni pure con test; ogni semplificazione è " +
-      "dichiarata nella metodologia. In breve:",
+    "Sito statico in italiano, senza pubblicità né cookie, con il codice aperto. I conti li fa " +
+      "un motore di funzioni pure con test; ogni semplificazione è dichiarata nella metodologia. " +
+      "In breve:",
     "",
     "- imposte: 12,5% su cedole, rateo e disaggio di emissione; plusvalenze e minusvalenze al " +
       "26% sul 48,08% della base (12,5% effettivo), compensabili con lo zainetto;",

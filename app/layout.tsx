@@ -1,14 +1,15 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import Link from "next/link";
+import Script from "next/script";
 import { Navigazione } from "@/components/navigazione";
 import { AUTORE, OPEN_GRAPH_SITO, URL_CODICE, URL_SITO } from "@/lib/sito";
 import "./globals.css";
 
 /*
  * I caratteri vengono da node_modules e finiscono in out/ con il resto del
- * sito: la compilazione serale non dipende da Google Fonts, e il browser di
- * chi guarda non chiama nessun altro indirizzo.
+ * sito: la compilazione serale non dipende da Google Fonts, e per i caratteri
+ * il browser di chi guarda non chiama nessun altro indirizzo.
  */
 const sans = localFont({
   src: [
@@ -108,8 +109,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 secondo il fisco italiano e cifra finale in euro.
               </p>
               <p>
-                Niente cookie, niente statistiche di visita, niente account: quello che scrivi resta
-                nel tuo browser.
+                Niente cookie e niente account: quello che scrivi resta nel tuo browser.{" "}
+                <Link href="/privacy/" className="text-[var(--accento)] underline underline-offset-2">
+                  Privacy
+                </Link>
+                .
               </p>
             </div>
             <div className="space-y-2">
@@ -155,6 +159,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </p>
           </div>
         </footer>
+        <Script src="https://statistiche.quantotorna.it/q.js" strategy="afterInteractive" />
       </body>
     </html>
   );

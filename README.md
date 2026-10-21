@@ -48,7 +48,7 @@ tabella si fanno alla compilazione, su 10.000 nominali e senza commissioni;
 quelli che dipendono da chi guarda — nominale e commissioni per la tabella,
 in più prezzo e zainetto per le simulazioni — nel suo browser, con le
 stesse funzioni. Il motore (`lib/`) è fatto di funzioni pure con i loro
-test. Non c'è un server, né cookie, né statistiche di visita.
+test. Il sito è statico, senza cookie.
 
 ```sh
 npm ci
