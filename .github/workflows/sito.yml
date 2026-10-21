@@ -159,6 +159,10 @@ jobs:
 
   pubblica:
     needs: compila
+    # Esplicito: senza, il `controllo` saltato sui push e a mano si
+    # trascinava dietro anche questo job, e dal 21/10/2026 sera non si
+    # pubblicava più niente.
+    if: ${{ !cancelled() && needs.compila.result == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
