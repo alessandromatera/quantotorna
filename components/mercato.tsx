@@ -4,6 +4,7 @@ import { PannelloCondizioni, riassuntoCondizioni, useCondizioni } from "@/compon
 import { CurvaRendimenti, type PuntoCurva } from "@/components/grafici";
 import { LinkStrumento } from "@/components/link-strumento";
 import { MenuFiltro, NotaMenu, OpzioneFiltro } from "@/components/menu-filtro";
+import { AvantiIndietro, ElencoPagine } from "@/components/pagine-tabella";
 import { SimulaAcquisto } from "@/components/simula-acquisto";
 import { Termine } from "@/components/termine";
 import {
@@ -71,9 +72,16 @@ import {
   type ChiaveOrdinamento,
   type Ordinamento,
 } from "@/lib/mercato/ordinamento";
+import {
+  indicePagina,
+  pagineDiRighe,
+  paginePerAnno,
+  sceltaDi,
+  type SceltaPagina,
+} from "@/lib/mercato/pagine";
 import { leggiPareggio } from "@/lib/mercato/pareggio";
 import { SOGLIE_SCAMBI, formatControvalore, formatFrequenza } from "@/lib/mercato/scambi";
-import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
 
 /** Colori di Italia ed estero nella curva: gli stessi slot in tutto il sito. */
 const COLORE_ITALIA = "var(--serie-1)";
@@ -679,10 +687,26 @@ export function Mercato({
     () => ordinaCandidati(filtra(indicizzabili.titoli, filtri), ordinamento),
     [indicizzabili, filtri, ordinamento],
   );
-  const gruppi = useMemo(
-    () => (perAnno ? raggruppaPerAnno(titoli, ordinamento) : [{ anno: null as number | null, titoli }]),
+  /**
+   * La tabella a pagine (vedi lib/mercato/pagine.ts): un anno di scadenza per
+   * pagina, o cinquanta righe senza anni. Le pagine si rifanno dai titoli
+   * filtrati: un filtro che lascia pochi titoli in un anno lo accorpa ai vicini.
+   */
+  const pagine = useMemo(
+    () => (perAnno ? paginePerAnno(raggruppaPerAnno(titoli, ordinamento)) : pagineDiRighe(titoli)),
     [titoli, ordinamento, perAnno],
   );
+  const [sceltaPagina, setSceltaPagina] = useState<SceltaPagina | null>(null);
+  const paginaCorrente = indicePagina(pagine, sceltaPagina, titoli);
+  const gruppi = pagine[paginaCorrente]?.gruppi ?? [];
+  /** Sopra le pagine: chi cambia pagina dal fondo riparte dalla prima riga. */
+  const inizioPagine = useRef<HTMLDivElement>(null);
+  function cambiaPagina(indice: number) {
+    setSceltaPagina(sceltaDi(pagine, indice, titoli));
+    setAperta(null);
+    const inizio = inizioPagine.current;
+    if (inizio && inizio.getBoundingClientRect().top < 0) inizio.scrollIntoView({ block: "start" });
+  }
   /**
    * I punti della curva: gli stessi titoli della tabella, quelli con un
    * rendimento. Non è un secondo elenco — se un filtro toglie righe alla
@@ -1071,6 +1095,9 @@ export function Mercato({
               </p>
             </details>
 
+            <div ref={inizioPagine}>
+              <ElencoPagine pagine={pagine} indice={paginaCorrente} onScegli={cambiaPagina} />
+            </div>
             <Tabella
               colonne={colonneFlussi}
               ordinamento={ordinamento}
@@ -1166,6 +1193,7 @@ export function Mercato({
                 </Fragment>
               ))}
             </Tabella>
+            <AvantiIndietro pagine={pagine} indice={paginaCorrente} onScegli={cambiaPagina} />
           </div>
         )}
 
