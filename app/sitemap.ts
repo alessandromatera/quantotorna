@@ -18,5 +18,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.5,
     },
+    {
+      url: `${URL_SITO}/informazioni/`,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
   ];
 }

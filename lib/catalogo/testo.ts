@@ -140,6 +140,7 @@ export function llmsTxt(m: MetricheCatalogo): string {
     "",
     `- [Titoli](${URL_SITO}/): la tabella di tutti i titoli con YTM netto e lordo, plusvalenza a rimborso, netto a scadenza, duration e scambi`,
     `- [Metodologia](${URL_SITO}/metodologia/): come si fanno i conti, le imposte, le semplificazioni, le fonti e le verifiche`,
+    `- [Informazioni](${URL_SITO}/informazioni/): chi fa il sito, da dove vengono i dati, le avvertenze`,
     "",
     "## Dati",
     "",

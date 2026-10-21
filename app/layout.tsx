@@ -98,60 +98,35 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           {children}
         </main>
         <footer className="mt-12 border-t border-[var(--bordo)] bg-[var(--superficie)] text-xs text-[var(--inchiostro-muto)]">
-          <div className="contenitore grid gap-8 py-10 md:grid-cols-3">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-[var(--inchiostro)]">
-                <Segno />
-                <Marchio />
-              </div>
-              <p>
-                Quanto torna davvero un titolo di Stato tenuto fino a scadenza: rendimento netto
-                secondo il fisco italiano e cifra finale in euro.
-              </p>
-              <p>
-                Niente cookie e niente account: quello che scrivi resta nel tuo browser.{" "}
-                <Link href="/privacy/" className="text-[var(--accento)] underline underline-offset-2">
-                  Privacy
-                </Link>
-                .
-              </p>
+          {/* Il resto (sito, dati, avvertenze per intero) sta in app/informazioni. */}
+          <div className="contenitore flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-[var(--inchiostro)]">
+              <Segno />
+              <Marchio />
             </div>
-            <div className="space-y-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--inchiostro)]">
-                Dati
-              </h2>
-              <p>
-                L'ultimo prezzo di ogni titolo sul MOT da Borsa Italiana, scambi degli ultimi tre
-                mesi da Euronext, prezzi e date d'asta dal MEF e da onvista, Euribor dalla BCE.
-                Scaricati una volta al giorno dopo la chiusura.
-              </p>
-              <p>
-                Come si fanno i conti, con le semplificazioni dichiarate:{" "}
-                <Link href="/metodologia/" className="text-[var(--accento)] underline underline-offset-2">
-                  metodologia
-                </Link>
-                .
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--inchiostro)]">
-                Avvertenze
-              </h2>
-              <p>
-                <strong className="text-[var(--inchiostro-2)]">Non è consulenza finanziaria.</strong>{" "}
-                I numeri vengono da un motore di calcolo con le semplificazioni dichiarate nella
-                metodologia; prima di comprare controlla il conto del tuo intermediario.
-              </p>
-              <p>
-                Dati e calcoli sono forniti «così come sono» (<em>as is</em>), senza alcuna garanzia
-                di esattezza, completezza o aggiornamento. Non si assume alcuna responsabilità per
-                errori od omissioni, né per l'uso che se ne fa o per le decisioni prese sulla base di
-                queste pagine.
-              </p>
-            </div>
+            <nav aria-label="Altre pagine" className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-[var(--inchiostro-2)]">
+              <Link href="/informazioni/" className="hover:text-[var(--accento)]">
+                Informazioni
+              </Link>
+              <Link href="/metodologia/" className="hover:text-[var(--accento)]">
+                Metodologia
+              </Link>
+              <Link href="/privacy/" className="hover:text-[var(--accento)]">
+                Privacy
+              </Link>
+              <a href={URL_CODICE} className="hover:text-[var(--accento)]">
+                Codice
+              </a>
+            </nav>
           </div>
           <div className="border-t border-[var(--griglia)]">
             <p className="contenitore py-4">
+              <strong className="text-[var(--inchiostro-2)]">Non è consulenza finanziaria</strong>: dati
+              e calcoli sono forniti «così come sono», senza garanzie (
+              <Link href="/informazioni/#avvertenze" className="text-[var(--accento)] underline underline-offset-2">
+                avvertenze
+              </Link>
+              ).{" "}
               <a href={URL_CODICE} className="text-[var(--accento)] underline underline-offset-2">
                 Codice aperto
               </a>{" "}
