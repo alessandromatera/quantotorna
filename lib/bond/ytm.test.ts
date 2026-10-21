@@ -106,8 +106,8 @@ describe("rendimentoNetto", () => {
   it("su più anni il valore annuo è la media lineare del guadagno", () => {
     const p = { ...zeroCoupon, dataScadenza: "2030-07-23" };
     const r = rendimentoNetto(p)!;
-    // `anniResidui` è arrotondato per la UI; la divisione usa gli anni esatti.
-    expect(r.anniResidui).toBeCloseTo(4, 1);
+    // Anni esatti, non arrotondati: l'arrotondamento è della pagina.
+    expect(r.anniResidui).toBe(anniTraActAct("2026-07-23", "2030-07-23"));
     expect(r.guadagnoNettoAnnuo).toBe(
       Math.round(r.guadagnoNetto / anniTraActAct("2026-07-23", "2030-07-23")),
     );
@@ -541,6 +541,34 @@ describe("rendimentoSuCapitale", () => {
       guadagno: 500_000,
       guadagnoAnnuo: 125_000,
     });
+  });
+
+  /**
+   * BTP 2,65% dicembre 2027 a 99,35, regolamento 22/10/2026: 1,1096 anni.
+   * Diviso per gli anni arrotondati a 1,11 la tabella dava 282,24 € l'anno
+   * sui 10.000 € spesi, il dettaglio 283,07 sui 10.025,60 € dei 10.000
+   * nominali: le due cifre annue devono stare nella stessa proporzione dei
+   * guadagni.
+   */
+  it("la cifra annua sta nella stessa proporzione del guadagno", () => {
+    const r = rendimentoNetto(
+      perAcquisto({
+        categoria: "btpFisso",
+        quantita: 10_000,
+        prezzo: 99.35,
+        prezzoCarico: 99.35,
+        cedolaAnnua: 2.65,
+        frequenzaCedola: 2,
+        dataScadenza: "2027-12-01",
+        dataRiferimento: "2026-10-20",
+      }),
+    )!;
+    expect(r.anniResidui).toBeCloseTo(1.1096, 4);
+    expect([r.esborso, r.guadagnoNetto, r.guadagnoNettoAnnuo]).toEqual([1_002_560, 31_409, 28_307]);
+    // Sulla somma che si spende davvero, la stessa cifra annua al centesimo.
+    expect(rendimentoSuCapitale(r, r.esborso).guadagnoAnnuo).toBe(r.guadagnoNettoAnnuo);
+    const s = rendimentoSuCapitale(r, 1_000_000);
+    expect(s.guadagnoAnnuo).toBe(Math.round(s.guadagno / anniTraActAct("2026-10-22", "2027-12-01")));
   });
 
   it("su un titolo vero torna con lo YTM: stesso capitale, stesso ordine", () => {
