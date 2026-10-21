@@ -217,18 +217,16 @@ function colonne(nominale: number): Colonna[] {
       numerica: true,
       evidenza: true,
     },
-    // Lo stesso rendimento in euro, ma sulla somma spesa e non sui nominali:
-    // è la cifra da confrontare quando si decide dove mettere una somma, e a
-    // differenza dello YTM premia anche il tempo.
+    // Lo stesso rendimento in euro, sui nominali come il resto della riga: è
+    // il conto di «Se lo compro», e a differenza dello YTM premia anche il
+    // tempo.
     {
       chiave: "netto",
       ordina: "netto a scadenza",
       intestazione: (
         <>
           <Termine chiave="nettoAScadenza">Netto a scadenza</Termine>
-          <span className="block whitespace-normal font-normal normal-case tracking-normal">
-            ogni {formatNumero(nominale)} € spesi
-          </span>
+          {su}
         </>
       ),
       numerica: true,
@@ -1085,9 +1083,10 @@ export function Mercato({
                 {senzaCommissioni(condizioni.tariffa)
                   ? "commissioni escluse"
                   : "con le commissioni della tua tariffa"}
-                . «Netto a scadenza» è lo stesso rendimento in euro, su{" "}
-                {formatNumero(nominale)} € spesi oggi invece che sui nominali: premia anche il tempo, quindi fra scadenze diverse dice quanto
-                ci si ritrova, non quanto rende. «Plus a rimborso» <strong>non è un extra da
+                . «Netto a scadenza» è lo stesso rendimento in euro: cedole nette e rimborso
+                netto dei {formatNumero(nominale)} nominali, e sotto quanto guadagni sul loro
+                costo, come in «Se lo compro». Premia anche il tempo e il prezzo, quindi fra
+                titoli diversi dice quanto ti torna, non quale rende di più. «Plus a rimborso» <strong>non è un extra da
                 sommare</strong> allo YTM netto: ci è già dentro. È il differenziale certo fra
                 prezzo e rimborso — misurato dal prezzo teorico, perché il disaggio di emissione
                 è tassato a parte — e serve a decidere sullo zainetto. Positivo comprando sotto
@@ -1156,18 +1155,18 @@ export function Mercato({
                             )}
                         </Cella>
                         <Cella numerica>
-                          {t.nettoSuSpesa == null ? (
+                          {t.rendimentoNominale == null ? (
                             "—"
                           ) : (
                             <>
-                              {formatEuro(t.nettoSuSpesa.incassi)}
+                              {formatEuro(t.rendimentoNominale.incassi)}
                               <span className="block text-xs font-medium text-[var(--delta-buono)]">
-                                {formatEuroSegno(t.nettoSuSpesa.guadagno)}
+                                {formatEuroSegno(t.rendimentoNominale.guadagno)}
                               </span>
                               {/* Sotto l'anno l'annualizzazione di un guadagno di
                                   pochi giorni sarebbe fuorviante: solo il totale. */}
-                              {t.rendimentoNominale && t.rendimentoNominale.anni >= 1 && (
-                                <Sotto>{formatEuroSegno(t.nettoSuSpesa.guadagnoAnnuo)}/anno</Sotto>
+                              {t.rendimentoNominale.anni >= 1 && (
+                                <Sotto>{formatEuroSegno(t.rendimentoNominale.annuo)}/anno</Sotto>
                               )}
                             </>
                           )}

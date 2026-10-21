@@ -528,10 +528,7 @@ export interface RendimentoNetto {
   guadagnoNetto: Centesimi;
   /** Centesimi: guadagno netto diviso per gli anni residui (media lineare). */
   guadagnoNettoAnnuo: Centesimi;
-  /**
-   * Anni residui, ACT/ACT, esatti: ci dividono anche `rendimentoSuCapitale`
-   * e chi riporta il guadagno su un'altra somma. Si arrotondano solo in pagina.
-   */
+  /** Anni residui, ACT/ACT, esatti: si arrotondano solo in pagina. */
   anniResidui: number;
 }
 
@@ -558,22 +555,4 @@ export function rendimentoNetto(p: ParametriBond): RendimentoNetto | null {
     guadagnoNettoAnnuo: arrotondaCentesimi(guadagnoNetto / anniResidui),
     anniResidui,
   };
-}
-
-/**
- * Lo stesso rendimento su un capitale dato invece che sul nominale: quanto
- * si ritrova a scadenza chi spende oggi `capitale` (rateo e crediti
- * d'imposta compresi). Diecimila nominali costano ottomila euro su un titolo
- * e undicimila su un altro: per decidere dove mettere una somma, gli euro
- * vanno confrontati sulla stessa somma. È una proporzione esatta, perché
- * flussi ed esborso crescono insieme con la quantità, e la cifra annua
- * divide per gli stessi anni esatti di `rendimentoNetto`.
- */
-export function rendimentoSuCapitale(
-  r: RendimentoNetto,
-  capitale: Centesimi,
-): { incassi: Centesimi; guadagno: Centesimi; guadagnoAnnuo: Centesimi } {
-  const incassi = Math.round((r.incassiNetti * capitale) / r.esborso);
-  const guadagno = incassi - capitale;
-  return { incassi, guadagno, guadagnoAnnuo: arrotondaCentesimi(guadagno / r.anniResidui) };
 }

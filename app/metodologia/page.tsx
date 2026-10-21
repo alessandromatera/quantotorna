@@ -114,36 +114,34 @@ export default function Metodologia() {
             <li>
               Come ogni YTM, presuppone che le cedole si reinvestano allo stesso tasso. La colonna
               «<strong>Netto a scadenza</strong>» no: somma cedole nette e rimborso netto così come
-              arrivano, sulla somma spesa oggi.
+              arrivano.
             </li>
             <li>
-              Il «<strong>netto a scadenza</strong>» della tabella e il «<strong>guadagno netto</strong>»
-              di «Se lo compro» sono lo stesso conto su due somme diverse. La tabella parte da quanto
-              spendi, 10.000 € o il nominale delle tue condizioni, con rateo, commissioni e crediti
-              d'imposta compresi, e compra i nominali che quella somma paga: così ogni riga si
-              confronta sulla stessa spesa. «Se lo compro» parte dai nominali che scrivi e spende
-              quello che costano. Se 10.000 nominali costano 10.025,60 € e rendono 314,09 €, 10.000 €
-              spesi ne comprano circa 9.974 e rendono 313,29 €, cioè 314,09 × 10.000 / 10.025,60; lo
-              YTM netto è lo stesso. Con una tariffa che ha un minimo, un massimo o una quota fissa
-              le due cifre si scostano un poco da questa proporzione, perché la commissione non
-              cresce con la quantità.
+              Il «<strong>netto a scadenza</strong>» della tabella è il conto di «Se lo compro» al
+              prezzo di chiusura: gli stessi nominali, 10.000 o quelli delle tue condizioni, con
+              rateo, commissioni e crediti d'imposta. Sopra gli incassi netti, sotto il guadagno
+              netto, cioè gli incassi meno quanto costano i nominali. Non è su una somma in euro
+              perché i titoli si comprano a lotti, di solito da 1.000 nominali: una somma tonda
+              compra quasi sempre nominali fuori dal lotto, e i conti sarebbero su un acquisto che
+              non si può fare. Il prezzo però conta: diecimila nominali costano 8.000 € su un titolo
+              e 11.200 su un altro, quindi fra titoli diversi gli euro dicono quanto ti torna, non
+              quale rende di più. Per quello c'è lo YTM netto.
             </li>
             <li>
-              Sotto i due guadagni c'è quanto fanno per anno: il guadagno diviso per gli anni che
-              mancano dal regolamento alla scadenza, contati ACT/ACT e senza arrotondarli, così le
-              due cifre annue stanno nella stessa proporzione dei guadagni. È una media lineare,
-              senza capitalizzazione: dà l'ordine di grandezza in euro, il tasso resta lo YTM. Sotto
-              l'anno non c'è, perché annualizzare il guadagno di pochi mesi sarebbe fuorviante.
+              Sotto il guadagno c'è quanto fa per anno: il guadagno diviso per gli anni che mancano
+              dal regolamento alla scadenza, contati ACT/ACT e senza arrotondarli. È una media
+              lineare, senza capitalizzazione: dà l'ordine di grandezza in euro, il tasso resta lo
+              YTM. Sotto l'anno non c'è, perché annualizzare il guadagno di pochi mesi sarebbe
+              fuorviante.
             </li>
             <li>
-              Nella tabella, di partenza: 10.000 nominali (e 10.000 € spesi per il netto a
-              scadenza), prezzo di chiusura, nessuna commissione. Nominale e tariffa li cambi
-              nelle tue condizioni, e la tabella rifà i conti nel tuo browser; il prezzo lo
-              cambi nella simulazione sotto ogni titolo. Le commissioni d'acquisto entrano nel
-              costo fiscale e riducono la plusvalenza; al rimborso non se ne pagano altre. Lo
-              zainetto non entra nella tabella: si consuma una volta sola, non per ogni riga. I
-              titoli che a scadenza restituiscono meno di quanto costano, imposte comprese e
-              senza commissioni, non sono in elenco.
+              Nella tabella, di partenza: 10.000 nominali, prezzo di chiusura, nessuna commissione.
+              Nominale e tariffa li cambi nelle tue condizioni, e la tabella rifà i conti nel tuo
+              browser; il prezzo lo cambi nella simulazione sotto ogni titolo. Le commissioni
+              d'acquisto entrano nel costo fiscale e riducono la plusvalenza; al rimborso non se ne
+              pagano altre. Lo zainetto non entra nella tabella: si consuma una volta sola, non per
+              ogni riga. I titoli che a scadenza restituiscono meno di quanto costano, imposte
+              comprese e senza commissioni, non sono in elenco.
             </li>
           </Elenco>
         </Sezione>

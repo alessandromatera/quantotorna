@@ -218,7 +218,7 @@ export function PannelloCondizioni({
       <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1.2fr)]">
         <Parte
           titolo="Tabella e simulazioni"
-          spiegazione="Il nominale della tabella e delle simulazioni. Il «netto a scadenza» lo usa come somma spesa: 5.000 nominali, ogni 5.000 € spesi."
+          spiegazione="Il nominale della tabella e delle simulazioni, «netto a scadenza» compreso."
         >
           <div className="space-y-3">
             <CampoNumero

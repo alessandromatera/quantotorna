@@ -15,10 +15,10 @@ titolo, e dice anche quanti euro si ritrovano a scadenza.
   step-up, BOT, strip, CCTeu, BTP€i e BTP Italia, titoli esteri della white
   list e sovranazionali — con il rendimento netto e lordo a scadenza dove
   si può calcolare (reale, sugli indicizzati), la plusvalenza a rimborso,
-  quanto si ritrova a scadenza ogni 10.000 € spesi, la duration e quanto il
-  titolo scambia davvero. Si filtra per famiglia, scadenza, emittente,
-  volatilità e scambi, si ordina da ogni colonna e si sfoglia a pagine, un
-  anno di scadenza per pagina.
+  quanto si incassa e si guadagna a scadenza su 10.000 nominali, la
+  duration e quanto il titolo scambia davvero. Si filtra per famiglia,
+  scadenza, emittente, volatilità e scambi, si ordina da ogni colonna e si
+  sfoglia a pagine, un anno di scadenza per pagina.
 - **Le imposte**: 12,5% su cedole, rateo e disaggio di emissione;
   plusvalenze e minusvalenze al 26% sul 48,08% della base, compensabili con
   lo zainetto; lo storno dell'imposta sul rateo pagato all'acquisto; la

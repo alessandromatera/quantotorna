@@ -3,12 +3,10 @@ import {
   capitalGainRimborso,
   isScartoAnticipato,
   rendimentoNetto,
-  rendimentoSuCapitale,
   ytmLordo,
   ytmNetto,
   ytmNettoSenzaCapitalGain,
   type ParametriBond,
-  type RendimentoNetto,
 } from "../bond/ytm";
 import type { CategoriaStrumento } from "../categorie";
 import { commissione, TARIFFA_NULLA, type TariffaMercato } from "../costi/commissioni";
@@ -57,8 +55,9 @@ export const NOMINALE_RIFERIMENTO = 10_000;
 
 /**
  * Su cosa si fanno i conti della tabella. Il nominale fa le colonne «su
- * 10.000 nom.» ed è anche la somma, in euro, del «netto a scadenza»: «ogni
- * 10.000 € spesi». Lo zainetto non c'è: si consuma una volta sola, e
+ * 10.000 nom.», «netto a scadenza» compreso: lo stesso acquisto di «Se lo
+ * compro», che si può fare davvero (una somma in euro comprerebbe nominali
+ * fuori dai lotti del MOT). Lo zainetto non c'è: si consuma una volta sola, e
  * applicato a ogni riga come se fosse l'unico acquisto gonfierebbe tutti i
  * rendimenti insieme. Per chi ha minusvalenze c'è lo YTM senza capital gain.
  */
@@ -122,10 +121,12 @@ export interface RigaFlussiNoti extends TitoloValutato {
   plusRimborso: Centesimi;
   /** Centesimi: imposta su quel differenziale, senza zainetto. */
   impostaRimborsoSenzaZainetto: Centesimi;
-  /** Centesimi guadagnati sul nominale delle condizioni: totale, per anno, e su quanti anni. */
-  rendimentoNominale: { totale: Centesimi; annuo: Centesimi; anni: number } | null;
-  /** Centesimi: quanto si ritrova a scadenza chi spende oggi la somma delle condizioni. */
-  nettoSuSpesa: { incassi: Centesimi; guadagno: Centesimi; guadagnoAnnuo: Centesimi } | null;
+  /**
+   * Centesimi sul nominale delle condizioni, come in «Se lo compro»: incassi
+   * netti fino a scadenza, guadagno sul costo netto, guadagno per anno, e su
+   * quanti anni.
+   */
+  rendimentoNominale: { incassi: Centesimi; guadagno: Centesimi; annuo: Centesimi; anni: number } | null;
 }
 
 export interface RigaVariabile extends TitoloValutato {
@@ -274,27 +275,6 @@ function acquisto(
   };
 }
 
-/**
- * Quanto si ritrova a scadenza chi spende oggi la somma delle condizioni,
- * rateo, commissioni e crediti d'imposta compresi. Si compra il nominale che
- * costa quella somma, stimato dall'acquisto dei nominali, e solo quello che
- * resta si riproporziona: con un minimo, un massimo o una quota fissa per
- * eseguito le commissioni non crescono con la quantità, e riproporzionare
- * l'acquisto dei nominali le conterebbe sbagliate (su un titolo a 50, il
- * doppio della quota fissa).
- */
-function nettoSuSpesa(
-  t: TitoloValutato,
-  oggi: string,
-  condizioni: CondizioniTabella,
-  suNominale: RendimentoNetto,
-): RigaFlussiNoti["nettoSuSpesa"] {
-  const spesa = condizioni.nominale * 100;
-  const quantita = (condizioni.nominale * spesa) / suNominale.esborso;
-  const r = rendimentoNetto(acquisto(t, oggi, quantita, condizioni.tariffa));
-  return r ? rendimentoSuCapitale(r, spesa) : null;
-}
-
 function rigaFlussiNoti(
   t: TitoloValutato,
   oggi: string,
@@ -323,12 +303,12 @@ function rigaFlussiNoti(
     impostaRimborsoSenzaZainetto: capitalGain.imposta,
     rendimentoNominale: rendimento
       ? {
-          totale: rendimento.guadagnoNetto,
+          incassi: rendimento.incassiNetti,
+          guadagno: rendimento.guadagnoNetto,
           annuo: rendimento.guadagnoNettoAnnuo,
           anni: rendimento.anniResidui,
         }
       : null,
-    nettoSuSpesa: rendimento ? nettoSuSpesa(t, oggi, condizioni, rendimento) : null,
   };
 }
 

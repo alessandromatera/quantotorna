@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { simulaAcquisto } from "../bond/acquisto";
 import { ytmLordo } from "../bond/ytm";
 import type { EmissioneSalvata } from "../mercato/emissioni";
 import type { Catalogo, TitoloCatalogo } from "./formato";
@@ -52,7 +53,7 @@ describe("metricheCatalogo", () => {
     expect(t.plusRimborso).toBe(20_000);
     expect(t.plusCompensabile).toBe(true);
     expect(t.durationModificata).toBeGreaterThan(3);
-    expect(t.nettoSuSpesa!.incassi).toBeGreaterThan(1_000_000);
+    expect(t.rendimentoNominale!.incassi).toBeGreaterThan(1_000_000);
   });
 
   it("lascia fuori chi scade il giorno dei prezzi e ordina per scadenza", () => {
@@ -220,10 +221,10 @@ describe("righeConCondizioni", () => {
     const meta = rifai(5_000);
     expect(meta.flussiNoti[0].plusRimborso).toBe(m.flussiNoti[0].plusRimborso / 2);
     expect(meta.flussiNoti[0].ytmNettoPct).toBe(m.flussiNoti[0].ytmNettoPct);
-    // Ogni 5.000 € spesi: la metà di ogni 10.000, a meno degli arrotondamenti
-    // al centesimo di ogni cedola.
-    const guadagno = meta.flussiNoti[0].nettoSuSpesa!.guadagno;
-    expect(Math.abs(guadagno - m.flussiNoti[0].nettoSuSpesa!.guadagno / 2)).toBeLessThanOrEqual(10);
+    // Su 5.000 nominali la metà del guadagno di 10.000, a meno degli
+    // arrotondamenti al centesimo di ogni cedola.
+    const guadagno = meta.flussiNoti[0].rendimentoNominale!.guadagno;
+    expect(Math.abs(guadagno - m.flussiNoti[0].rendimentoNominale!.guadagno / 2)).toBeLessThanOrEqual(10);
   });
 
   it("le commissioni abbassano lo YTM netto, anche dei CCTeu, e non il lordo", () => {
@@ -237,21 +238,22 @@ describe("righeConCondizioni", () => {
     expect(m.flussiNoti[0].plusRimborso - con.flussiNoti[0].plusRimborso).toBe(1_862);
   });
 
-  it("il netto a scadenza conta la quota fissa una volta, sulla somma spesa", () => {
-    // 10 € per eseguito, comunque. Con 10.000 € su un titolo a 50 si compra
-    // un ordine solo da circa 20.000 nominali: la quota si paga una volta.
-    // Riproporzionare l'acquisto dei 10.000 nominali (5.000 €) la conterebbe
-    // due volte.
-    const fisso = { percentuale: 0, minimo: 0, massimo: 0, fisso: 1_000 };
-    const senza = m.flussiNoti[1].nettoSuSpesa!;
-    const con = rifai(10_000, fisso).flussiNoti[1].nettoSuSpesa!;
-    const perso = senza.incassi - con.incassi;
-    // I 10 € che vanno in commissione non si comprano: a scadenza mancano
-    // quanto sarebbero diventati, cioè 10 € per quanto torna ogni euro speso
-    // (quasi due, su un titolo a 50). Un po' meno, perché la commissione
-    // riduce la plusvalenza tassata. Due quote ne farebbero mancare il doppio.
-    const resa = senza.incassi / 1_000_000;
-    expect(perso).toBeGreaterThan(1_000 * resa * 0.9);
-    expect(perso).toBeLessThan(1_000 * resa * 1.05);
+  it("il netto a scadenza è il conto di «Se lo compro», commissioni comprese", () => {
+    // Chi apre la riga deve ritrovare le cifre della tabella: stesso
+    // nominale, stessa tariffa, stesso prezzo di chiusura. Anche con una
+    // quota fissa, che non cresce con la quantità.
+    const tariffa = { percentuale: 0.19, minimo: 295, massimo: 1_900, fisso: 1_000 };
+    for (const nominale of [10_000, 3_000]) {
+      const righe = rifai(nominale, tariffa).flussiNoti;
+      for (const t of righe) {
+        const dettaglio = simulaAcquisto(parametriTitolo(t, m.data, nominale), tariffa)!.rendimento!;
+        expect(t.rendimentoNominale).toEqual({
+          incassi: dettaglio.incassiNetti,
+          guadagno: dettaglio.guadagnoNetto,
+          annuo: dettaglio.guadagnoNettoAnnuo,
+          anni: dettaglio.anniResidui,
+        });
+      }
+    }
   });
 });

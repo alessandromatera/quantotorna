@@ -53,12 +53,12 @@ export function rendimentiInMarkdown(m: MetricheCatalogo): string {
     "",
     `## Tasso fisso, step-up, strip e BOT (${m.flussiNoti.length} titoli)`,
     "",
-    "YTM netto e lordo: rendimento annuo composto tenendo fino a scadenza. «Netto ogni " +
-      `${nominale} € spesi»: cedole nette più rimborso netto che si incassano spendendo oggi ` +
-      `${nominale} €, rateo e crediti d'imposta compresi; le cedole non si reinvestono.`,
+    "YTM netto e lordo: rendimento annuo composto tenendo fino a scadenza. «Guadagno netto»: " +
+      `cedole nette più rimborso netto di ${nominale} nominali, meno quanto costano oggi con ` +
+      "rateo e crediti d'imposta; le cedole non si reinvestono.",
     "",
     tabella(
-      ["Titolo", "ISIN", "Scadenza", "Cedola", "Prezzo", "YTM netto", "YTM lordo", `Netto ogni ${nominale} € spesi`],
+      ["Titolo", "ISIN", "Scadenza", "Cedola", "Prezzo", "YTM netto", "YTM lordo", `Guadagno netto su ${nominale} nominali`],
       m.flussiNoti.map((t) => [
         t.nome,
         t.isin,
@@ -67,7 +67,7 @@ export function rendimentiInMarkdown(m: MetricheCatalogo): string {
         formatPrezzoMot(t.prezzo),
         pctONulla(t.ytmNettoPct),
         pctONulla(t.ytmLordoPct),
-        t.nettoSuSpesa ? formatEuro(t.nettoSuSpesa.incassi) : "—",
+        t.rendimentoNominale ? formatEuro(t.rendimentoNominale.guadagno) : "—",
       ]),
     ),
     "",

@@ -18,7 +18,7 @@ function btp(p: Partial<CandidatoOrdinabile> & { isin: string }): CandidatoOrdin
     prezzo: 100,
     durationModificata: 3,
     scambiMediana: 100_000,
-    nettoSuSpesa: { incassi: 1_100_000 },
+    rendimentoNominale: { guadagno: 100_000 },
     ...p,
   };
 }
@@ -84,14 +84,14 @@ describe("ordinaCandidati", () => {
 
   /**
    * Il netto a scadenza premia anche il tempo: a parità di rendimento annuo,
-   * dieci anni danno più euro di due. È la domanda «quanto mi ritrovo», non
-   * «quanto rende», e dentro lo stesso anno coincide quasi con lo YTM.
+   * dieci anni danno più euro di due. È la domanda «quanto guadagno», non
+   * «quanto rende»: per quello c'è lo YTM.
    */
-  it("per netto a scadenza: chi restituisce di più prima", () => {
+  it("per netto a scadenza: chi guadagna di più prima", () => {
     const titoli = [
-      btp({ isin: "A", nettoSuSpesa: { incassi: 1_080_000 } }),
-      btp({ isin: "B", nettoSuSpesa: { incassi: 1_420_000 } }),
-      btp({ isin: "C", nettoSuSpesa: null }),
+      btp({ isin: "A", rendimentoNominale: { guadagno: 80_000 } }),
+      btp({ isin: "B", rendimentoNominale: { guadagno: 420_000 } }),
+      btp({ isin: "C", rendimentoNominale: null }),
     ];
     expect(isin(ordinaCandidati(titoli, { chiave: "netto", verso: "desc" }))).toEqual(["B", "A", "C"]);
   });

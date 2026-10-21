@@ -18,7 +18,6 @@ import {
   prezzoTeorico,
   rateoAllaData,
   rendimentoNetto,
-  rendimentoSuCapitale,
   stornoImpostaRateo,
   ytmLordo,
   ytmNetto,
@@ -528,29 +527,13 @@ describe("BOT: scarto tassato in anticipo, plusvalenza sul prezzo teorico", () =
   });
 });
 
-describe("rendimentoSuCapitale", () => {
-  /**
-   * Due titoli con lo stesso YTM e prezzi diversi: sui 10.000 nominali il più
-   * caro sembra rendere più euro solo perché costa di più; sullo stesso
-   * capitale rendono uguale.
-   */
-  it("riporta il rendimento a un capitale dato", () => {
-    const r = { incassiNetti: 1_200_000, esborso: 800_000, guadagnoNetto: 400_000, guadagnoNettoAnnuo: 100_000, anniResidui: 4 };
-    expect(rendimentoSuCapitale(r, 1_000_000)).toEqual({
-      incassi: 1_500_000,
-      guadagno: 500_000,
-      guadagnoAnnuo: 125_000,
-    });
-  });
-
+describe("rendimentoNetto", () => {
   /**
    * BTP 2,65% dicembre 2027 a 99,35, regolamento 22/10/2026: 1,1096 anni.
-   * Diviso per gli anni arrotondati a 1,11 la tabella dava 282,24 € l'anno
-   * sui 10.000 € spesi, il dettaglio 283,07 sui 10.025,60 € dei 10.000
-   * nominali: le due cifre annue devono stare nella stessa proporzione dei
-   * guadagni.
+   * Diviso per gli anni arrotondati a 1,11 la cifra annua veniva 282,96 €
+   * invece di 283,07: si divide per gli anni esatti.
    */
-  it("la cifra annua sta nella stessa proporzione del guadagno", () => {
+  it("la cifra annua divide il guadagno per gli anni esatti", () => {
     const r = rendimentoNetto(
       perAcquisto({
         categoria: "btpFisso",
@@ -565,32 +548,6 @@ describe("rendimentoSuCapitale", () => {
     )!;
     expect(r.anniResidui).toBeCloseTo(1.1096, 4);
     expect([r.esborso, r.guadagnoNetto, r.guadagnoNettoAnnuo]).toEqual([1_002_560, 31_409, 28_307]);
-    // Sulla somma che si spende davvero, la stessa cifra annua al centesimo.
-    expect(rendimentoSuCapitale(r, r.esborso).guadagnoAnnuo).toBe(r.guadagnoNettoAnnuo);
-    const s = rendimentoSuCapitale(r, 1_000_000);
-    expect(s.guadagnoAnnuo).toBe(Math.round(s.guadagno / anniTraActAct("2026-10-22", "2027-12-01")));
-  });
-
-  it("su un titolo vero torna con lo YTM: stesso capitale, stesso ordine", () => {
-    const base: ParametriBond = {
-      categoria: "btpFisso",
-      quantita: 10_000,
-      prezzo: 92,
-      prezzoCarico: 92,
-      cedolaAnnua: 1,
-      frequenzaCedola: 2,
-      dataScadenza: "2031-03-01",
-      dataRiferimento: "2026-10-22",
-    };
-    const caro = { ...base, prezzo: 103, prezzoCarico: 103, cedolaAnnua: 3.2 };
-    const rb = rendimentoNetto(perAcquisto(base))!;
-    const rc = rendimentoNetto(perAcquisto(caro))!;
-    const sb = rendimentoSuCapitale(rb, 1_000_000);
-    const sc = rendimentoSuCapitale(rc, 1_000_000);
-    // A parità di scadenza, chi rende di più per euro investito ha lo YTM più alto.
-    expect(Math.sign(sb.incassi - sc.incassi)).toBe(
-      Math.sign(ytmNetto(perAcquisto(base))! - ytmNetto(perAcquisto(caro))!),
-    );
   });
 });
 

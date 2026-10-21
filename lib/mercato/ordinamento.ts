@@ -93,8 +93,8 @@ export interface CandidatoOrdinabile {
   durationModificata: number | null;
   /** Mediana degli euro scambiati per seduta; null se non letta. */
   scambiMediana: number | null;
-  /** Centesimi che si ritrovano a scadenza spendendo oggi la somma delle condizioni; null se non calcolati. */
-  nettoSuSpesa: { incassi: number } | null;
+  /** Centesimi guadagnati a scadenza sul nominale delle condizioni; null se non calcolati. */
+  rendimentoNominale: { guadagno: number } | null;
 }
 
 function round2(v: number): number {
@@ -115,7 +115,7 @@ function valore(t: CandidatoOrdinabile, chiave: ChiaveOrdinamento): number | str
     case "ytm":
       return t.ytmNettoPct == null ? null : round2(t.ytmNettoPct);
     case "netto":
-      return t.nettoSuSpesa?.incassi ?? null;
+      return t.rendimentoNominale?.guadagno ?? null;
     case "duration":
       return t.durationModificata == null ? null : round2(t.durationModificata);
     case "scambi":

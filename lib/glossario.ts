@@ -187,7 +187,7 @@ export const GLOSSARIO: Record<string, VoceGlossario> = {
   nettoAScadenza: {
     titolo: "Netto a scadenza",
     testo:
-      "Quanto ti ritrovi alla scadenza se oggi spendi su questo titolo la somma indicata (10.000 €, o il nominale delle tue condizioni): cedole nette più rimborso netto, con rateo, commissioni e crediti d'imposta dell'acquisto già contati. È sulla somma spesa e non sui nominali, perché diecimila nominali costano 8.000 € su un titolo e 11.200 su un altro: così le cifre si confrontano sulla stessa somma. Sotto, il guadagno e quanto fa per anno. Attenzione: premia anche il tempo — a pari rendimento, dieci anni danno più euro di due —, quindi fra scadenze diverse dice quanto ci si ritrova, non quale rende di più; per quello c'è lo YTM netto.",
+      "Quanto incassi da qui alla scadenza comprando oggi 10.000 nominali (o il nominale delle tue condizioni): cedole nette più rimborso netto. Sotto, il guadagno, cioè quegli incassi meno quanto costano i nominali con rateo, commissioni e crediti d'imposta, e quanto fa per anno. Sono le cifre di «Se lo compro», che si apre col clic sulla riga. Attenzione: premiano anche il tempo e il prezzo. A pari rendimento dieci anni danno più euro di due, e diecimila nominali costano 8.000 € su un titolo e 11.200 su un altro: fra titoli diversi dicono quanto ti torna, non quale rende di più. Per quello c'è lo YTM netto.",
   },
   rendimentoInEuro: {
     titolo: "Rendimento in euro",

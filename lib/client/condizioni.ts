@@ -11,10 +11,7 @@ import { scadenzaMinusvalenza, type VoceZainetto } from "../tax/zainetto";
  * Modulo puro: la lettura è qui e testata, il salvataggio sta nel componente.
  */
 export interface Condizioni {
-  /**
-   * Nominale della tabella e delle simulazioni d'acquisto e di uscita; per il
-   * «netto a scadenza», la somma spesa in euro.
-   */
+  /** Nominale della tabella e delle simulazioni d'acquisto e di uscita. */
   nominale: number;
   tariffa: TariffaMercato;
   /** Minusvalenze ancora da compensare, anno per anno. */
