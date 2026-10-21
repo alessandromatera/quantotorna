@@ -46,7 +46,11 @@ export interface TitoloCatalogo {
   spread: number | null;
   /** Solo step-up: il piano delle cedole (lib/mercato/stepup.ts). */
   gradiniCedola: GradinoCedola[] | null;
-  /** Scambi degli ultimi tre mesi (Euronext); null = storico non letto. */
+  /**
+   * Scambi degli ultimi tre mesi (Euronext); null = storico non letto. Se
+   * Euronext non risponde per nessun titolo sono quelli di ieri: vedi
+   * `rapporto.fontiMancanti`.
+   */
   scambi: SintesiScambi | null;
 }
 
@@ -76,9 +80,18 @@ export interface Catalogo {
     scartate: { isin: string; motivo: string }[];
     /**
      * Fonti che oggi non hanno risposto: i loro dati sono quelli dell'ultimo
-     * giorno buono, o mancano. La pagina le nomina.
+     * giorno buono, o mancano. La pagina le nomina, con quel giorno.
      */
-    fontiMancanti: { fonte: string; errore: string }[];
+    fontiMancanti: {
+      fonte: string;
+      errore: string;
+      /**
+       * L'ultimo giorno dei prezzi in cui la fonte ha risposto; null se non
+       * si sa (nessun catalogo prima, o uno scritto prima che ci fosse
+       * questo campo).
+       */
+      ultimaLettura: string | null;
+    }[];
   };
 }
 
@@ -144,6 +157,10 @@ export function leggiCatalogo(grezzo: unknown): Catalogo {
         return {
           fonte: testo(o.fonte, `rapporto.fontiMancanti[${i}].fonte`),
           errore: testo(o.errore, `rapporto.fontiMancanti[${i}].errore`),
+          // Assente nei cataloghi scritti prima che ci fosse il campo (fino al
+          // 21/10/2026): si legge null.
+          ultimaLettura:
+            o.ultimaLettura == null ? null : dataISO(o.ultimaLettura, `rapporto.fontiMancanti[${i}].ultimaLettura`),
         };
       }),
     },

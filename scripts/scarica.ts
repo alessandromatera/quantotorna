@@ -71,7 +71,9 @@ async function main() {
 
   stampa(rapporto, catalogo.data, Date.now() - inizio);
   for (const f of catalogo.rapporto.fontiMancanti) {
-    console.log(`ATTENZIONE: ${f.fonte} non ha risposto (${f.errore}).`);
+    console.log(
+      `ATTENZIONE: ${f.fonte} non ha risposto (${f.errore}); ultima lettura riuscita: ${f.ultimaLettura ?? "non nota"}.`,
+    );
   }
 }
 

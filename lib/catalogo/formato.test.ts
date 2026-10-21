@@ -97,4 +97,18 @@ describe("leggiCatalogo", () => {
     expect(c.titoli[0].scambi).toBeNull();
     expect(c.euribor6m).toBeNull();
   });
+
+  it("una fonte mancante porta l'ultima lettura; senza, nei cataloghi di prima, è null", () => {
+    const g = grezzo();
+    g.rapporto = {
+      scartate: [],
+      fontiMancanti: [
+        { fonte: "Euronext (scambi)", errore: "nessuno storico letto", ultimaLettura: "2026-10-19" },
+        { fonte: "BCE (Euribor 6 mesi)", errore: "la BCE ha risposto 500" },
+      ],
+    };
+    expect(leggiCatalogo(g).rapporto.fontiMancanti.map((f) => f.ultimaLettura)).toEqual(["2026-10-19", null]);
+    (g.rapporto as { fontiMancanti: Record<string, unknown>[] }).fontiMancanti[0].ultimaLettura = "ieri";
+    expect(() => leggiCatalogo(g)).toThrow("rapporto.fontiMancanti[0].ultimaLettura");
+  });
 });

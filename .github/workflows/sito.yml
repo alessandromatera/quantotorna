@@ -12,6 +12,8 @@
 #   riscaricare niente.
 # - Primo giro, quando il sito non c'è ancora: a mano, con «da zero» e
 #   onvista a 700, per avere subito i dati di emissione.
+# - A mano si può anche ripartire dal catalogo di un giro passato
+#   (`catalogo_da_giro`), finché GitHub ne tiene il pacchetto.
 #
 # Su una repo pubblica GitHub sospende gli orari dopo 60 giorni senza
 # attività nella repo: il giro quotidiano non fa commit, quindi va
@@ -42,11 +44,17 @@ on:
         description: "Schede onvista da leggere (vuoto: 40, come ogni giorno)"
         type: string
         default: ""
+      catalogo_da_giro:
+        description: "Numero di un giro passato da cui prendere il catalogo di ieri, invece che dal sito (finché GitHub ne tiene il pacchetto: un giorno)"
+        type: string
+        default: ""
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  # Per scaricare il pacchetto di un giro passato (`catalogo_da_giro`).
+  actions: read
 
 # Un giro alla volta, e quello in corso non si interrompe: un catalogo
 # scritto a metà non si pubblica.
@@ -108,11 +116,29 @@ jobs:
         run: npm test
 
       - name: Catalogo di ieri, dal sito
-        if: ${{ !inputs.da_zero }}
+        if: ${{ !inputs.da_zero && !inputs.catalogo_da_giro }}
         run: |
           mkdir -p dati
           curl --fail --silent --show-error --location --retry 3 \
             https://quantotorna.it/dati/catalogo.json -o dati/catalogo.json
+
+      # A mano, per ripartire dal catalogo di un giro passato invece che da
+      # quello pubblicato: lo si prende dal pacchetto che quel giro ha
+      # pubblicato, finché GitHub lo tiene. Serve quando il catalogo
+      # pubblicato ha perso qualcosa (il 21/10/2026 gli scambi, che
+      # Euronext non dava più).
+      - name: Catalogo di ieri, da un giro passato
+        if: ${{ !inputs.da_zero && inputs.catalogo_da_giro }}
+        env:
+          GIRO: ${{ inputs.catalogo_da_giro }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! [[ "$GIRO" =~ ^[0-9]+$ ]]; then echo "catalogo_da_giro: atteso il numero di un giro"; exit 1; fi
+          gh run download "$GIRO" --repo "$GITHUB_REPOSITORY" --name github-pages --dir pacchetto
+          tar -xf pacchetto/artifact.tar -C pacchetto ./dati/catalogo.json
+          mkdir -p dati
+          mv pacchetto/dati/catalogo.json dati/catalogo.json
+          rm -rf pacchetto
 
       - name: Dati di oggi
         if: github.event_name != 'push'

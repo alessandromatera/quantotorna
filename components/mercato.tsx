@@ -763,8 +763,15 @@ export function Mercato({
         <div className="space-y-2">
           {rapporto.fontiMancanti.map((f) => (
             <Avviso key={f.fonte} tono="avviso">
-              <strong>{f.fonte}</strong> oggi non ha risposto ({f.errore}): i suoi dati sono
-              quelli dell'ultimo giorno in cui si sono potuti leggere, o mancano.
+              <strong>{f.fonte}</strong> oggi non ha risposto ({f.errore}).{" "}
+              {f.ultimaLettura != null ? (
+                <>
+                  I suoi dati sono quelli dell'ultima lettura riuscita, del{" "}
+                  <strong>{formatDataIT(f.ultimaLettura)}</strong>.
+                </>
+              ) : (
+                "Non si sa di quando sia l'ultima lettura riuscita: i suoi dati possono mancare."
+              )}
             </Avviso>
           ))}
           {metriche.senzaEmissione > 0 && (

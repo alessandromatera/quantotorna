@@ -308,7 +308,9 @@ export default function Metodologia() {
             Tutto si scarica una volta al giorno, dopo la chiusura. Se una pagina dei listini cambia
             forma lo scaricamento fallisce e il sito resta quello del giorno prima: mai un elenco a
             metà presentato come completo. Se manca una delle altre fonti il sito si aggiorna lo
-            stesso, con i dati dell'ultimo giorno buono, e lo scrive in cima alla pagina.
+            stesso, con i dati dell'ultimo giorno buono, e lo scrive in cima alla pagina con la
+            data di quel giorno. Per gli scambi vale quando Euronext non risponde per nessun
+            titolo: un titolo che non si legge mentre gli altri sì resta «non letto».
           </p>
         </Sezione>
 

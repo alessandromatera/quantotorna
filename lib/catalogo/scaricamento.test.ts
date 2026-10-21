@@ -187,12 +187,13 @@ describe("aggiornaCatalogo", () => {
       opzioni,
     );
     expect(catalogo.euribor6m).toEqual({ percentuale: 2.1, periodo: "2026-08" });
+    // Ieri la BCE aveva risposto: l'ultima lettura è il giorno di ieri.
     expect(catalogo.rapporto.fontiMancanti).toEqual([
-      { fonte: "BCE (Euribor 6 mesi)", errore: "la BCE ha risposto 500" },
+      { fonte: "BCE (Euribor 6 mesi)", errore: "la BCE ha risposto 500", ultimaLettura: "2026-10-19" },
     ]);
   });
 
-  it("senza Euronext gli scambi restano «non letti», non a zero", async () => {
+  it("senza Euronext e senza un catalogo di ieri gli scambi restano «non letti», non a zero", async () => {
     const { catalogo } = await aggiornaCatalogo(
       null,
       fonti({
@@ -203,7 +204,77 @@ describe("aggiornaCatalogo", () => {
       opzioni,
     );
     expect(catalogo.titoli[0].scambi).toBeNull();
-    expect(catalogo.rapporto.fontiMancanti.map((f) => f.fonte)).toEqual(["Euronext (scambi)"]);
+    expect(catalogo.rapporto.fontiMancanti).toEqual([
+      { fonte: "Euronext (scambi)", errore: "Euronext ha risposto 403", ultimaLettura: null },
+    ]);
+  });
+
+  /** Un titolo di ieri con i suoi scambi, per vedere cosa resta quando Euronext non risponde. */
+  function titoloDiIeri(isin: string, mediana: number): Catalogo["titoli"][number] {
+    return {
+      isin,
+      nome: `Btp Inventato ${isin.slice(-3)}`,
+      tipo: "fisso",
+      emittente: "IT",
+      cedolaAnnua: 3,
+      frequenzaCedola: 2,
+      dataScadenza: "2031-03-01",
+      prezzo: 98,
+      spread: null,
+      gradiniCedola: null,
+      scambi: { mediana, sedute: 64, attive: 61 },
+    };
+  }
+
+  it("se Euronext non dà niente restano gli scambi di ieri, col giorno dell'ultima lettura", async () => {
+    const { catalogo } = await aggiornaCatalogo(
+      ieri({ titoli: [titoloDiIeri("IT0000000011", 42_000)] }),
+      fonti({
+        listini: async () => ({ righe: [riga("IT0000000011"), riga("IT0000000029")], scartate: [], pagine: 1 }),
+        scambi: async () => ({ letti: new Map(), falliti: [] }),
+      }),
+      opzioni,
+    );
+    expect(catalogo.titoli.map((t) => t.scambi?.mediana ?? null)).toEqual([42_000, null]);
+    expect(catalogo.rapporto.fontiMancanti).toEqual([
+      { fonte: "Euronext (scambi)", errore: "nessuno storico letto", ultimaLettura: "2026-10-19" },
+    ]);
+  });
+
+  it("se Euronext mancava già ieri, l'ultima lettura resta quella che ieri riportava", async () => {
+    const { catalogo } = await aggiornaCatalogo(
+      ieri({
+        titoli: [titoloDiIeri("IT0000000011", 42_000)],
+        rapporto: {
+          scartate: [],
+          fontiMancanti: [{ fonte: "Euronext (scambi)", errore: "nessuno storico letto", ultimaLettura: "2026-10-16" }],
+        },
+      }),
+      fonti({
+        scambi: async () => {
+          throw new Error("Euronext ha risposto 503");
+        },
+      }),
+      opzioni,
+    );
+    expect(catalogo.titoli[0].scambi?.mediana).toBe(42_000);
+    expect(catalogo.rapporto.fontiMancanti[0].ultimaLettura).toBe("2026-10-16");
+  });
+
+  it("se Euronext risponde per qualche titolo, quelli che non legge restano «non letti»", async () => {
+    const { catalogo } = await aggiornaCatalogo(
+      ieri({ titoli: [titoloDiIeri("IT0000000011", 42_000), titoloDiIeri("IT0000000029", 9_000)] }),
+      fonti({
+        listini: async () => ({ righe: [riga("IT0000000011"), riga("IT0000000029")], scartate: [], pagine: 1 }),
+        scambi: async () => ({
+          letti: new Map([["IT0000000029", { mediana: 11_000, sedute: 65, attive: 60 }]]),
+          falliti: [{ isin: "IT0000000011", motivo: "storico vuoto" }],
+        }),
+      }),
+      opzioni,
+    );
+    expect(catalogo.titoli.map((t) => t.scambi?.mediana ?? null)).toEqual([null, 11_000]);
+    expect(catalogo.rapporto.fontiMancanti).toEqual([]);
   });
 
   it("il piano di uno step-up si tiene da ieri, senza rileggere la scheda", async () => {

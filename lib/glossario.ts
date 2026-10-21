@@ -182,7 +182,7 @@ export const GLOSSARIO: Record<string, VoceGlossario> = {
   scambi: {
     titolo: "Scambi",
     testo:
-      "Quanto scambia di solito il titolo sul MOT: la mediana degli euro scambiati per seduta negli ultimi tre mesi, e in quante sedute c'è stato almeno uno scambio. Dallo storico di Euronext (che possiede Borsa Italiana), riletto ogni giorno. Mediana e non media: la media la gonfiano pochi blocchi grossi, a te serve la giornata tipica. Più un titolo scambia, più il prezzo mostrato è recente e più è facile rivenderlo prima della scadenza a un prezzo vicino. «non letto» vuol dire che lo storico non si è potuto leggere, non che il titolo non scambia.",
+      "Quanto scambia di solito il titolo sul MOT: la mediana degli euro scambiati per seduta negli ultimi tre mesi, e in quante sedute c'è stato almeno uno scambio. Dallo storico di Euronext (che possiede Borsa Italiana), riletto ogni giorno. Mediana e non media: la media la gonfiano pochi blocchi grossi, a te serve la giornata tipica. Più un titolo scambia, più il prezzo mostrato è recente e più è facile rivenderlo prima della scadenza a un prezzo vicino. «non letto» vuol dire che lo storico non si è potuto leggere, non che il titolo non scambia. Se un giorno Euronext non risponde per nessun titolo, restano gli scambi dell'ultima lettura riuscita, e l'avviso in cima alla pagina dice di quando.",
   },
   nettoAScadenza: {
     titolo: "Netto a scadenza",

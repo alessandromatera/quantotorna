@@ -40,8 +40,11 @@ import { VERSIONE_CATALOGO, type Catalogo, type TitoloCatalogo } from "./formato
  * Non hanno lo stesso peso. Senza listini non c'è catalogo, e lo
  * scaricamento FALLISCE: resta quello di ieri, e il sito non si ricompila.
  * Senza una delle altre fonti il catalogo si scrive lo stesso, con quello che
- * si sa — i dati di emissione e l'Euribor di ieri restano, gli scambi non
- * letti restano «non letti» — e `rapporto.fontiMancanti` lo dice in pagina.
+ * si sa — i dati di emissione, l'Euribor e gli scambi di ieri restano — e
+ * `rapporto.fontiMancanti` lo dice in pagina, con l'ultimo giorno in cui la
+ * fonte ha risposto. Gli scambi di ieri restano solo se Euronext non dà
+ * niente: un titolo che oggi non si legge, quando gli altri sì, resta «non
+ * letto», perché il dato di un titolo non porta il suo giorno.
  *
  * Le fonti sono iniettate: in produzione scaricano (scripts/scarica.ts), nei
  * test rispondono con dati fissi.
@@ -126,6 +129,23 @@ const IN_PARALLELO = 4;
  */
 const GIORNI_EMISSIONE_FUORI_CATALOGO = 120;
 
+/** Le fonti che possono mancare senza fermare lo scaricamento, come la pagina le nomina. */
+export const FONTI_SECONDARIE = {
+  bce: "BCE (Euribor 6 mesi)",
+  mef: "MEF (risultati d'asta)",
+  euronext: "Euronext (scambi)",
+} as const;
+
+/**
+ * L'ultimo giorno in cui `fonte` ha risposto, visto da ieri: il giorno del
+ * catalogo di ieri se ieri c'era, altrimenti quello che ieri già riportava.
+ */
+export function ultimaLettura(fonte: string, precedente: Catalogo | null): string | null {
+  if (precedente == null) return null;
+  const mancava = precedente.rapporto.fontiMancanti.find((f) => f.fonte === fonte);
+  return mancava ? mancava.ultimaLettura : precedente.data;
+}
+
 export async function aggiornaCatalogo(
   precedente: Catalogo | null,
   fonti: Fonti,
@@ -133,6 +153,8 @@ export async function aggiornaCatalogo(
 ): Promise<{ catalogo: Catalogo; rapporto: RapportoScaricamento }> {
   const { oggi } = opzioni;
   const fontiMancanti: Catalogo["rapporto"]["fontiMancanti"] = [];
+  const manca = (fonte: string, errore: string) =>
+    fontiMancanti.push({ fonte, errore, ultimaLettura: ultimaLettura(fonte, precedente) });
 
   // Listini, elenco del MEF ed Euribor sono indipendenti: insieme.
   const [listini, documentiMef, euribor] = await Promise.allSettled([
@@ -155,7 +177,7 @@ export async function aggiornaCatalogo(
   if (euribor.status === "fulfilled") {
     euribor6m = { percentuale: euribor.value.percentuale, periodo: euribor.value.periodo };
   } else {
-    fontiMancanti.push({ fonte: "BCE (Euribor 6 mesi)", errore: messaggio(euribor.reason) });
+    manca(FONTI_SECONDARIE.bce, messaggio(euribor.reason));
   }
 
   // Emissioni e scambi dopo i listini, perché i titoli da completare sono
@@ -180,9 +202,10 @@ export async function aggiornaCatalogo(
     throw emissioni.reason;
   }
   const e = emissioni.value;
-  if (e.rapporto.mef.errore != null) fontiMancanti.push({ fonte: "MEF (risultati d'asta)", errore: e.rapporto.mef.errore });
+  if (e.rapporto.mef.errore != null) manca(FONTI_SECONDARIE.mef, e.rapporto.mef.errore);
 
   let rapportoScambi: RapportoScaricamento["scambi"];
+  let erroreScambi: string | null = null;
   if (scambi.status === "fulfilled") {
     for (const t of titoli) t.scambi = scambi.value.letti.get(t.isin) ?? null;
     rapportoScambi = {
@@ -190,12 +213,17 @@ export async function aggiornaCatalogo(
       maiScambiati: [...scambi.value.letti.values()].filter((s) => s.attive === 0).length,
       falliti: scambi.value.falliti,
     };
-    if (scambi.value.letti.size === 0) {
-      fontiMancanti.push({ fonte: "Euronext (scambi)", errore: "nessuno storico letto" });
-    }
+    if (scambi.value.letti.size === 0) erroreScambi = "nessuno storico letto";
   } else {
     rapportoScambi = { errore: messaggio(scambi.reason) };
-    fontiMancanti.push({ fonte: "Euronext (scambi)", errore: messaggio(scambi.reason) });
+    erroreScambi = messaggio(scambi.reason);
+  }
+  if (erroreScambi != null) {
+    // Euronext non ha dato niente: restano gli scambi di ieri, che a loro
+    // volta possono venire da prima (il giorno lo dice `ultimaLettura`).
+    const diIeri = new Map((precedente?.titoli ?? []).map((t) => [t.isin, t.scambi]));
+    for (const t of titoli) t.scambi = diIeri.get(t.isin) ?? null;
+    manca(FONTI_SECONDARIE.euronext, erroreScambi);
   }
 
   const catalogo: Catalogo = {
