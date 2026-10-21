@@ -311,6 +311,15 @@ function Pareggio({
   );
 }
 
+/** Verde se si guadagna, rosso se si perde, neutro in pari. */
+function coloreGuadagno(guadagnoNetto: number): string {
+  return guadagnoNetto > 0
+    ? "var(--delta-buono)"
+    : guadagnoNetto < 0
+      ? "var(--stato-critico)"
+      : "var(--inchiostro-2)";
+}
+
 /** Da dove viene il risultato: il conto in chiaro, non solo il totale. */
 function Scomposizione({
   esito,
@@ -319,12 +328,7 @@ function Scomposizione({
   esito: EsitoUscita;
   bond: ParametriBond;
 }) {
-  const colore =
-    esito.guadagnoNetto > 0
-      ? "var(--delta-buono)"
-      : esito.guadagnoNetto < 0
-        ? "var(--stato-critico)"
-        : "var(--inchiostro-2)";
+  const colore = coloreGuadagno(esito.guadagnoNetto);
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -481,6 +485,7 @@ function ContoUscita({ esito, quantita }: { esito: EsitoUscita; quantita: number
       importo: Math.abs(esito.guadagnoNetto),
       segno: "",
       forte: true,
+      colore: coloreGuadagno(esito.guadagnoNetto),
     },
   );
   return <TabellaConto righe={righe} />;

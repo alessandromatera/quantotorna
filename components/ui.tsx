@@ -142,6 +142,8 @@ export interface RigaConto {
   forte?: boolean;
   /** Da dove viene il numero, in piccolo sotto la voce. */
   nota?: ReactNode;
+  /** Colore dell'importo, per il risultato: la voce dice già se è guadagno o perdita. */
+  colore?: string;
 }
 
 /** Un conto riga per riga, come su un estratto: ogni totale somma le righe sopra. */
@@ -160,7 +162,12 @@ export function TabellaConto({ righe }: { righe: RigaConto[] }) {
               )}
             </td>
             <td className="w-4 py-1 text-right align-top text-[var(--inchiostro-muto)]">{r.segno}</td>
-            <td className="whitespace-nowrap py-1 text-right align-top">{formatEuro(r.importo)}</td>
+            <td
+              className="whitespace-nowrap py-1 text-right align-top"
+              style={r.colore ? { color: r.colore } : undefined}
+            >
+              {formatEuro(r.importo)}
+            </td>
           </tr>
         ))}
       </tbody>
