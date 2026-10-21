@@ -5,7 +5,9 @@
 #   piani degli step-up, documenti del MEF già letti), scarica i dati di
 #   oggi, compila e pubblica. Se i listini non si leggono, lo scaricamento
 #   esce con 1: il sito resta quello di ieri e GitHub lo segnala per email.
-#   Il rinnovo dei dati non tocca il codice e non chiede conferma.
+#   Il rinnovo dei dati non tocca il codice e non chiede conferma. Gli
+#   orari sono due: il secondo è di riserva e non rifà il giro se il primo
+#   ha già pubblicato i prezzi di oggi.
 # - Push su main: test, poi ricompila col catalogo già pubblicato, senza
 #   riscaricare niente.
 # - Primo giro, quando il sito non c'è ancora: a mano, con «da zero» e
@@ -19,10 +21,15 @@ name: sito
 
 on:
   schedule:
-    # 17:00 UTC: le 18 in inverno e le 19 d'estate a Roma, dopo la chiusura
-    # del MOT (17:30) e il quarto d'ora di ritardo dei prezzi di Borsa
-    # Italiana. GitHub può partire con qualche decina di minuti di ritardo.
-    - cron: "0 17 * * 1-5"
+    # 17:17 UTC: le 18:17 in inverno e le 19:17 d'estate a Roma, dopo la
+    # chiusura del MOT (17:30) e il quarto d'ora di ritardo dei prezzi di
+    # Borsa Italiana. Non all'ora piena: lì GitHub ha più carico, e i giri
+    # programmati slittano o saltano (il 21/10/2026 quello delle 17:00 non
+    # è mai partito).
+    - cron: "17 17 * * 1-5"
+    # La riserva, un'ora e mezza dopo: se il primo giro ha già pubblicato,
+    # il job `controllo` lo vede dalla data del catalogo e si ferma lì.
+    - cron: "47 18 * * 1-5"
   push:
     branches: [main]
   workflow_dispatch:
@@ -48,7 +55,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Solo sugli orari: la riserva non rifà quello che il primo giro ha già
+  # pubblicato. Il catalogo online porta la data dei prezzi, che nei giorni
+  # feriali è quella di oggi, e l'ora in cui è stato generato: conta come
+  # fatto solo se è di oggi e generato dalle 16:45 UTC, dopo la chiusura del
+  # MOT (17:30) e il quarto d'ora di ritardo anche con l'ora solare. Un giro
+  # lanciato a mano durante la seduta ha la data di oggi ma non i prezzi di
+  # chiusura, e gli orari lo rifanno. Se il catalogo non si legge, si va
+  # avanti.
+  controllo:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      fatto: ${{ steps.data.outputs.fatto }}
+    steps:
+      - id: data
+        env:
+          TZ: Europe/Rome
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            https://quantotorna.it/dati/catalogo.json -o catalogo.json || exit 0
+          testa=$(head -c 300 catalogo.json)
+          data=$(printf '%s' "$testa" | sed -n 's/.*"data": *"\([0-9-]*\)".*/\1/p')
+          generato=$(printf '%s' "$testa" | sed -n 's/.*"generato": *"\([0-9T:.Z-]*\)".*/\1/p')
+          oggi=$(date +%F)
+          echo "Catalogo online del ${data:-?}, generato ${generato:-?}; oggi è $oggi."
+          if [ "$data" = "$oggi" ] && [[ "$generato" > "${oggi}T16:45" ]]; then
+            echo "fatto=true" >> "$GITHUB_OUTPUT"
+          fi
+
   compila:
+    needs: controllo
+    # Sui push e a mano `controllo` non gira, e il giro va avanti lo stesso.
+    if: ${{ !cancelled() && needs.controllo.outputs.fatto != 'true' }}
     runs-on: ubuntu-latest
     env:
       # Le date dei conti sono quelle italiane (`giornoDeiPrezzi`).
