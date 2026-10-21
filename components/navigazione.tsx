@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const VOCI = [
   { href: "/", nome: "Titoli" },
   { href: "/metodologia/", nome: "Metodologia" },
+  { href: "/informazioni/", nome: "Informazioni" },
 ];
 
 /** Le sezioni del sito, con quella in cui si è segnata (e detta agli screen reader). */
@@ -20,7 +21,7 @@ export function Navigazione() {
             key={v.href}
             href={v.href}
             aria-current={attiva ? "page" : undefined}
-            className={`flex items-center border-b-2 px-3 font-medium transition-colors ${
+            className={`flex items-center border-b-2 px-2 font-medium transition-colors sm:px-3 ${
               attiva
                 ? "border-[var(--marchio-inchiostro)] text-[var(--marchio-inchiostro)]"
                 : "border-transparent text-[var(--marchio-muto)] hover:text-[var(--marchio-inchiostro)]"

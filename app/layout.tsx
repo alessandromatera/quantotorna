@@ -87,9 +87,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </a>
         <header className="bg-[var(--marchio)] text-[var(--marchio-inchiostro)]">
           <div className="contenitore flex h-14 items-stretch justify-between gap-4">
+            {/* Sul telefono il nome lo leggono solo gli screen reader: con tre voci di menu non c'è posto. */}
             <Link href="/" className="flex items-center gap-2.5">
               <Segno />
-              <Marchio />
+              <span className="sr-only sm:not-sr-only">
+                <Marchio />
+              </span>
             </Link>
             <Navigazione />
           </div>
@@ -98,16 +101,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           {children}
         </main>
         <footer className="mt-12 border-t border-[var(--bordo)] bg-[var(--superficie)] text-xs text-[var(--inchiostro-muto)]">
-          {/* Il resto (sito, dati, avvertenze per intero) sta in app/informazioni. */}
+          {/* Il resto (sito, dati, avvertenze per intero) sta in app/informazioni, nel menu in alto. */}
           <div className="contenitore flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-[var(--inchiostro)]">
               <Segno />
               <Marchio />
             </div>
             <nav aria-label="Altre pagine" className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-[var(--inchiostro-2)]">
-              <Link href="/informazioni/" className="hover:text-[var(--accento)]">
-                Informazioni
-              </Link>
               <Link href="/metodologia/" className="hover:text-[var(--accento)]">
                 Metodologia
               </Link>
