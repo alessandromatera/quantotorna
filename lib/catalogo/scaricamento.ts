@@ -75,9 +75,8 @@ export interface OpzioniScaricamento {
    */
   maxDocumentiMef?: number;
   /**
-   * Schede onvista lette in un giorno, quattro alla volta (un decimo di
-   * secondo l'una). Con circa seicento titoli da coprire, al primo giro
-   * conviene alzarlo (vedi scripts/scarica.ts).
+   * Schede onvista lette in un giorno, al più, quattro alla volta (un decimo
+   * di secondo l'una). Senza: tutte quelle che mancano.
    */
   maxOnvista?: number;
   /** Schede di Borsa Italiana per le date di godimento mancanti. */
@@ -117,7 +116,12 @@ export interface RapportoScaricamento {
 }
 
 const MAX_DOCUMENTI_MEF = 150;
-const MAX_ONVISTA = 40;
+/**
+ * Ogni giorno si chiedono a onvista tutti i titoli senza dati di emissione,
+ * non una quarantina (deciso dall'autore il 21/10/2026): sono un centinaio,
+ * meno di mezzo minuto, e quelli che onvista non ha si richiedono ogni giorno.
+ */
+const MAX_ONVISTA = Number.POSITIVE_INFINITY;
 const MAX_SCHEDE_BI = 40;
 const IN_PARALLELO = 4;
 

@@ -3,7 +3,7 @@
  * sito.
  *
  *   npm run scarica                     il giro di ogni giorno
- *   npm run scarica -- --onvista 700    primo giro: tutte le schede onvista
+ *   npm run scarica -- --onvista 40     al più 40 schede onvista (senza: tutte quelle che mancano)
  *   npm run scarica -- --da-zero        ignora il catalogo di ieri
  *
  * Va lanciato dopo la chiusura del MOT (17:30): prima, l'«ultimo» di Borsa

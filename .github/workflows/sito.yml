@@ -10,8 +10,8 @@
 #   ha già pubblicato i prezzi di oggi.
 # - Push su main: test, poi ricompila col catalogo già pubblicato, senza
 #   riscaricare niente.
-# - Primo giro, quando il sito non c'è ancora: a mano, con «da zero» e
-#   onvista a 700, per avere subito i dati di emissione.
+# - Primo giro, quando il sito non c'è ancora: a mano, con «da zero». Le
+#   schede onvista si leggono tutte quelle che mancano, ogni giorno.
 # - A mano si può anche ripartire dal catalogo di un giro passato
 #   (`catalogo_da_giro`), finché GitHub ne tiene il pacchetto.
 #
@@ -41,7 +41,7 @@ on:
         type: boolean
         default: false
       onvista:
-        description: "Schede onvista da leggere (vuoto: 40, come ogni giorno)"
+        description: "Schede onvista da leggere al più (vuoto: tutte quelle che mancano, come ogni giorno)"
         type: string
         default: ""
       catalogo_da_giro:

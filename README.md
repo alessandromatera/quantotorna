@@ -66,10 +66,10 @@ sviluppo non va bene per questo: Next blocca i suoi file a chi non arriva da
 localhost, e la pagina si vede ma non risponde ai clic.
 
 Lo scaricamento va lanciato dopo la chiusura del MOT (17:30): prima, l'ultimo
-prezzo è quello della seduta in corso. Il primo giro trova i dati di
-emissione solo per i titoli italiani dell'anno; gli altri si leggono da
-onvista, quaranta al giorno (`npm run scarica -- --onvista 700` li prende
-tutti in una volta).
+prezzo è quello della seduta in corso. I dati di emissione dei titoli
+italiani dell'anno vengono dal MEF; quelli che mancano si chiedono tutti a
+onvista, ogni giorno (`npm run scarica -- --onvista 40` ne chiede al più
+quaranta).
 
 Come si fanno i conti, con le semplificazioni dichiarate e le verifiche:
 `app/metodologia/page.tsx`, la pagina «Metodologia» del sito.

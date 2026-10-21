@@ -779,7 +779,7 @@ export function Mercato({
               {metriche.senzaEmissione} titoli a tasso fisso sono senza prezzo o data di
               emissione e sono trattati come emessi alla pari: il disaggio non entra nel
               loro rendimento netto, che può risultare di qualche punto base più alto del
-              vero. I dati mancanti si cercano un po' alla volta, ogni giorno.
+              vero. I dati mancanti si cercano di nuovo ogni giorno, tutti.
             </Avviso>
           )}
           {scambiAssenti.nonLetti > 0 && (

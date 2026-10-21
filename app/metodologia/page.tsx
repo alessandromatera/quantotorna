@@ -281,7 +281,8 @@ export default function Metodologia() {
             </li>
             <li>
               <strong>onvista</strong> (dati WM Datenservice): prezzo e data di emissione dei titoli
-              esteri e di quelli italiani emessi negli anni precedenti, una quarantina al giorno.
+              esteri e di quelli italiani emessi negli anni precedenti, cercati ogni giorno per
+              tutti i titoli che non li hanno ancora.
               Finché un titolo non li ha, è trattato come emesso alla pari e la pagina lo dice.
             </li>
             <li>
