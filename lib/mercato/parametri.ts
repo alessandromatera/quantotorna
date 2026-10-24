@@ -1,6 +1,7 @@
 import type { GradinoCedola } from "../bond/cedole";
 import { perAcquisto, type ParametriBond } from "../bond/ytm";
 import type { TipoCatalogo } from "../categorie";
+import { cedolaUnicaPerIlMotore, type CedolaUnica } from "./cedola-unica";
 
 /**
  * Prezzo e data di emissione di un titolo, quando si conoscono: decidono il
@@ -22,6 +23,8 @@ export interface RigaCatalogoValutabile {
   dataScadenza: string;
   /** Solo sugli step-up: il piano delle cedole. */
   gradiniCedola?: GradinoCedola[] | null;
+  /** Solo sulla cedola unica (BTP Valore Insieme). */
+  cedolaUnica?: CedolaUnica;
 }
 
 /**
@@ -32,8 +35,13 @@ export interface RigaCatalogoValutabile {
  * Senza, i titoli a poche settimane dalla scadenza uscivano con uno YTM netto
  * negativo che nella realtà non esiste.
  *
- * Unico punto in cui la famiglia di catalogo diventa una categoria fiscale:
- * scaricamento giornaliero e pagina devono vedere gli stessi numeri.
+ * Unico punto in cui la famiglia di catalogo diventa una categoria fiscale,
+ * e in cui un CCTeu prende la sua convenzione ACT/360: scaricamento
+ * giornaliero, tabella e simulazioni devono vedere gli stessi numeri.
+ * La data di emissione è anche il godimento da cui matura la prima cedola.
+ * Una cedola unica diventa un solo periodo cedolare dal godimento alla
+ * scadenza, col rateo in 30E/360; finché è il minimo del collocamento non
+ * c'è niente da calcolare, e chiederlo è un errore.
  */
 export function parametriAcquistoCatalogo(
   r: RigaCatalogoValutabile,
@@ -45,6 +53,10 @@ export function parametriAcquistoCatalogo(
   // francesi) ha un disaggio come qualunque titolo emesso sotto la pari:
   // credito all'acquisto, addebito a scadenza. Lo scarto tassato in anticipo
   // è solo dei BOT.
+  if (r.tipo === "cedolaUnica" && !r.cedolaUnica?.definitiva) {
+    throw new Error("cedola unica non definitiva: il rendimento non si calcola sul minimo del collocamento");
+  }
+  const unica = r.tipo === "cedolaUnica" ? r.cedolaUnica! : null;
   const zeroCouponConEmissione =
     r.tipo === "zeroCoupon" &&
     r.emittente !== "IT" &&
@@ -69,10 +81,18 @@ export function parametriAcquistoCatalogo(
     cedolaAnnua: r.cedolaAnnua,
     frequenzaCedola: r.frequenzaCedola,
     ...(r.gradiniCedola ? { gradiniCedola: r.gradiniCedola } : {}),
+    // Il Tesoro conta cedole e rateo dei CCTeu sui giorni effettivi / 360.
+    ...(r.tipo === "ccteu" ? { convenzioneCedola: "act360" as const } : {}),
+    ...(unica
+      ? { ...cedolaUnicaPerIlMotore(unica, r.dataScadenza), convenzioneCedola: "30E360" as const }
+      : {}),
     dataScadenza: r.dataScadenza,
     dataRiferimento: oggi,
     // Gli strip italiani nascono dalla separazione di un BTP: un «prezzo di
-    // emissione» trovato per loro non sarebbe quello che decide l'imposta.
+    // emissione» trovato per loro non sarebbe quello che decide l'imposta,
+    // e senza cedole un godimento non serve.
     ...(r.tipo === "zeroCoupon" && r.emittente === "IT" ? {} : emissione),
+    // Il periodo della cedola unica parte dal godimento della scheda.
+    ...(unica ? { dataEmissione: unica.godimento } : {}),
   });
 }

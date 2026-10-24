@@ -294,3 +294,70 @@ describe("grigliaScenari", () => {
     expect(griglia.every((r) => r.pareggio != null)).toBe(true);
   });
 });
+
+describe("BTP appena emesso: uscita prima della prima cedola, corta", () => {
+  // BTP inventato 3,50% semestrale, godimento 01/10/2026, scadenza
+  // 01/08/2036, comprato il 23/10/2026 a 100,50 (regolamento 27/10/2026).
+  // La prima cedola, il 01/02/2027, matura dal godimento.
+  const nuovo = perAcquisto({
+    categoria: "btpFisso",
+    quantita: 10_000,
+    prezzo: 100.5,
+    prezzoCarico: 100.5,
+    cedolaAnnua: 3.5,
+    frequenzaCedola: 2,
+    dataScadenza: "2036-08-01",
+    dataRiferimento: "2026-10-23",
+    dataEmissione: "2026-10-01",
+  });
+  const prima = simulaUscita({ bond: nuovo, dataUscita: "2027-01-15", shockPct: 0 })!;
+
+  it("il rateo di vendita matura dal godimento", () => {
+    // 175 € × 106/184 = 100,82 €, non 175 € × 167/184 = 158,83 € dal 01/08/2026.
+    expect(prima.rateoVendita).toBe(10_082);
+    expect(prima.cedoleLorde).toBe(0);
+    // 12,5% di 100,82 € = 12,60 €.
+    expect(prima.impostaCedoleRateo).toBe(1_260);
+  });
+
+  it("l'acquisto paga il rateo dal godimento, come in «Se lo compro»", () => {
+    // 10.050 € + 24,73 € di rateo − 3,09 € d'imposta stornata.
+    expect(prima.esborso).toBe(1_007_164);
+  });
+
+  it("uscendo dopo la prima cedola si incassa la cedola corta", () => {
+    const dopo = simulaUscita({ bond: nuovo, dataUscita: "2027-03-01", shockPct: 0 })!;
+    // 175 € × 123/184 = 116,98 €.
+    expect(dopo.cedoleLorde).toBe(11_698);
+    // Dal 01/02/2027 il semestre è pieno: 175 € × 28/181 = 27,07 €.
+    expect(dopo.rateoVendita).toBe(2_707);
+  });
+});
+
+describe("CCTeu: «Se esco prima» con la convenzione dei suoi conti", () => {
+  // CCTeu inventato, scadenza 15/04/2032, cedola stimata 3,10%.
+  const cct = perAcquisto({
+    categoria: "btpFisso",
+    quantita: 10_000,
+    prezzo: 101.2,
+    prezzoCarico: 101.2,
+    cedolaAnnua: 3.1,
+    frequenzaCedola: 2,
+    convenzioneCedola: "act360",
+    dataScadenza: "2032-04-15",
+    dataRiferimento: "2026-10-23",
+  });
+
+  it("a scadenza coi tassi fermi rende quanto lo YTM netto", () => {
+    const esito = simulaUscita({ bond: cct, dataUscita: "2032-04-15", shockPct: 0 })!;
+    expect(Math.abs(esito.rendimentoAnnuoPct! - ytmNetto(cct)! * 100)).toBeLessThan(0.01);
+  });
+
+  it("rateo di vendita su 360 e cedole coi giorni del semestre", () => {
+    const esito = simulaUscita({ bond: cct, dataUscita: "2027-11-15", shockPct: 0 })!;
+    // 15/10 → 15/11/2027: 31 giorni, 10.000 × 3,10% × 31/360 = 26,69 €.
+    expect(esito.rateoVendita).toBe(2_669);
+    // 156,72 € (182 giorni) + 157,58 € (183 giorni).
+    expect(esito.cedoleLorde).toBe(15_672 + 15_758);
+  });
+});

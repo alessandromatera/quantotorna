@@ -1,6 +1,7 @@
 import type { GradinoCedola } from "../bond/cedole";
 import { TIPI_CATALOGO, type TipoCatalogo } from "../categorie";
 import { isDataISO } from "../date";
+import type { CedolaUnica } from "../mercato/cedola-unica";
 import type { EmissioneSalvata } from "../mercato/emissioni";
 import { EMITTENTI, type Emittente } from "../mercato/emittenti";
 import type { SintesiScambi } from "../mercato/scambi";
@@ -15,7 +16,8 @@ import type { SintesiScambi } from "../mercato/scambi";
  * motore si corregge ricompilando, senza riscaricare niente.
  *
  * È anche la memoria dello scaricamento da un giorno all'altro: i dati di
- * emissione e i piani degli step-up non cambiano, e rileggerli ogni giorno
+ * emissione, i piani degli step-up e le cedole uniche definitive non
+ * cambiano, e rileggerli ogni giorno
  * vorrebbe dire centinaia di richieste in più (vedi `emissioni` e
  * `documentiMef`).
  *
@@ -35,9 +37,11 @@ export interface TitoloCatalogo {
   /**
    * Percentuale annua: nominale sui `fisso`, REALE sugli indicizzati, zero
    * su chi non ha cedole e sui CCTeu (per loro vale `spread`). Su uno
-   * step-up, quella del periodo in corso.
+   * step-up, quella del periodo in corso. Zero sulla cedola unica, che sta in
+   * `cedolaUnica`.
    */
   cedolaAnnua: number;
+  /** Cedole per anno. Sulla cedola unica non conta: il periodo lo dà `cedolaUnica`. */
   frequenzaCedola: number;
   dataScadenza: string;
   /** Prezzo di chiusura, base 100. REALE sugli indicizzati. */
@@ -46,6 +50,13 @@ export interface TitoloCatalogo {
   spread: number | null;
   /** Solo step-up: il piano delle cedole (lib/mercato/stepup.ts). */
   gradiniCedola: GradinoCedola[] | null;
+  /**
+   * Solo cedola unica (BTP Valore Insieme), e sempre: la cedola pagata a
+   * scadenza e il godimento, dalla scheda di Borsa Italiana
+   * (lib/mercato/cedola-unica.ts). Assente sugli altri titoli e nei cataloghi
+   * scritti prima del 24/10/2026, che non ne avevano.
+   */
+  cedolaUnica?: CedolaUnica;
   /**
    * Scambi degli ultimi tre mesi (Euronext); null = storico non letto. Se
    * Euronext non risponde per nessun titolo sono quelli di ieri: vedi
@@ -185,6 +196,9 @@ function leggiTitolo(grezzo: unknown, dove: string): TitoloCatalogo {
   if (![1, 2, 4, 12].includes(frequenzaCedola)) {
     throw new Error(`${dove}.frequenzaCedola: ${frequenzaCedola} non è una cadenza`);
   }
+  if ((tipo === "cedolaUnica") !== (t.cedolaUnica != null)) {
+    throw new Error(`${dove}.cedolaUnica: c'è solo, e sempre, sui titoli a cedola unica`);
+  }
   return {
     isin,
     nome: testo(t.nome, `${dove}.nome`),
@@ -205,6 +219,7 @@ function leggiTitolo(grezzo: unknown, dove: string): TitoloCatalogo {
               cedolaAnnua: numero(o.cedolaAnnua, `${dove}.gradiniCedola[${i}].cedolaAnnua`),
             };
           }),
+    ...(t.cedolaUnica != null ? { cedolaUnica: leggiCedolaUnica(t.cedolaUnica, `${dove}.cedolaUnica`) } : {}),
     scambi:
       t.scambi == null
         ? null
@@ -217,6 +232,14 @@ function leggiTitolo(grezzo: unknown, dove: string): TitoloCatalogo {
             };
           })(),
   };
+}
+
+function leggiCedolaUnica(grezzo: unknown, dove: string): CedolaUnica {
+  const c = oggetto(grezzo, dove);
+  const percentuale = numero(c.percentuale, `${dove}.percentuale`);
+  if (!(percentuale > 0 && percentuale < 100)) throw new Error(`${dove}.percentuale: ${percentuale} fuori scala`);
+  if (typeof c.definitiva !== "boolean") throw new Error(`${dove}.definitiva: atteso vero o falso`);
+  return { percentuale, definitiva: c.definitiva, godimento: dataISO(c.godimento, `${dove}.godimento`) };
 }
 
 function leggiEmissione(grezzo: unknown, dove: string): EmissioneSalvata {

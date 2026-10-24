@@ -1,5 +1,6 @@
 import { TIPI_CATALOGO, type TipoCatalogo } from "../categorie";
 import { aggiungiGiorni } from "../date";
+import { risolviCedoleUniche, type CedolaUnica } from "../mercato/cedola-unica";
 import {
   FONTE_BORSA_ITALIANA,
   FONTE_MEF,
@@ -29,7 +30,8 @@ import { VERSIONE_CATALOGO, type Catalogo, type TitoloCatalogo } from "./formato
  * 1. i listini del MOT da Borsa Italiana, che sostituiscono i titoli —
  *    prezzi, cedole, scadenze; ogni riga scartata è riportata col motivo. Ai
  *    BTP step-up serve il piano delle cedole, che il listino non ha: si
- *    tiene quello di ieri, e per un titolo nuovo si legge la sua scheda;
+ *    tiene quello di ieri, e per un titolo nuovo si legge la sua scheda. Al
+ *    BTP Valore Insieme serve la cedola unica, anche lei dalla scheda;
  * 2. prezzi e date di emissione, che servono al disaggio e che Borsa
  *    Italiana non pubblica: i risultati d'asta del MEF per i titoli italiani
  *    dell'anno, onvista per gli altri, la scheda di Borsa Italiana per la
@@ -54,6 +56,7 @@ export interface Fonti {
   euribor6m: () => Promise<TassoBce>;
   elencaDocumentiMef: () => Promise<DocumentoMef[]>;
   leggiDocumentiMef: (documenti: DocumentoMef[]) => Promise<EsitoDocumentoMef[]>;
+  /** La scheda di Borsa Italiana di un titolo: per gli step-up e per la cedola unica. */
   schedaStepUp: (isin: string) => Promise<SchedaStepUp>;
   emissioneOnvista: (isin: string) => Promise<EmissioneOnvista>;
   dataGodimento: (isin: string) => Promise<string>;
@@ -174,8 +177,9 @@ export async function aggiornaCatalogo(
   }
 
   const stepUp = await conPianiStepUp(listini.value.righe, precedente, fonti, oggi);
-  const titoli = stepUp.titoli;
-  const scartate = [...listini.value.scartate, ...stepUp.scartate];
+  const cedoleUniche = await conCedoleUniche(stepUp.titoli, precedente, fonti);
+  const titoli = cedoleUniche.titoli;
+  const scartate = [...listini.value.scartate, ...stepUp.scartate, ...cedoleUniche.scartate];
 
   let euribor6m: Catalogo["euribor6m"] = precedente?.euribor6m ?? null;
   if (euribor.status === "fulfilled") {
@@ -253,6 +257,34 @@ export async function aggiornaCatalogo(
       ...e.rapporto,
       scambi: rapportoScambi,
     },
+  };
+}
+
+/**
+ * La cedola unica su ogni titolo che ne paga una sola (lib/mercato/cedola-unica.ts);
+ * chi resta senza è scartato col motivo. Quella definitiva di ieri non si
+ * rilegge; il minimo del collocamento sì, ogni giorno.
+ */
+async function conCedoleUniche(
+  titoli: TitoloCatalogo[],
+  precedente: Catalogo | null,
+  fonti: Fonti,
+): Promise<{ titoli: TitoloCatalogo[]; scartate: { isin: string; motivo: string }[] }> {
+  const precedenti = new Map<string, CedolaUnica>();
+  for (const t of precedente?.titoli ?? []) {
+    if (t.cedolaUnica) precedenti.set(t.isin, t.cedolaUnica);
+  }
+  const { cedole, scartate } = await risolviCedoleUniche(
+    titoli.filter((t) => t.tipo === "cedolaUnica"),
+    { precedenti, leggiScheda: fonti.schedaStepUp },
+  );
+  return {
+    titoli: titoli.flatMap((t) => {
+      if (t.tipo !== "cedolaUnica") return [t];
+      const cedola = cedole.get(t.isin);
+      return cedola ? [{ ...t, cedolaUnica: cedola }] : [];
+    }),
+    scartate,
   };
 }
 

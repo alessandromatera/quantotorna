@@ -12,8 +12,8 @@ metà. quantotorna lo rifà con le regole del fisco italiano, titolo per
 titolo, e dice anche quanti euro si ritrovano a scadenza.
 
 - **La tabella**: tutti i titoli di Stato del MOT — BTP a tasso fisso e
-  step-up, BOT, strip, CCTeu, BTP€i e BTP Italia, titoli esteri della white
-  list e sovranazionali — con il rendimento netto e lordo a scadenza dove
+  step-up, BTP Valore Insieme, BOT, strip, CCTeu, BTP€i e BTP Italia, titoli
+  esteri della white list e sovranazionali — con il rendimento netto e lordo a scadenza dove
   si può calcolare (reale, sugli indicizzati), la plusvalenza a rimborso,
   quanto si incassa e si guadagna a scadenza su 10.000 nominali, la
   duration e quanto il titolo scambia davvero. Si filtra per famiglia,
@@ -58,6 +58,7 @@ npm run scarica   # scarica i dati del giorno in dati/catalogo.json (un minuto)
 npm run build     # compila il sito in out/
 npm run anteprima # compila e serve out/ su http://localhost:3100
 npm run dev       # oppure: il sito in sviluppo, sulla stessa porta
+npm run changelog # riscrive CHANGELOG.md da lib/novita.ts
 ```
 
 Per provarlo da un telefono o da un altro computer di casa:
@@ -72,7 +73,9 @@ onvista, ogni giorno (`npm run scarica -- --onvista 40` ne chiede al più
 quaranta).
 
 Come si fanno i conti, con le semplificazioni dichiarate e le verifiche:
-`app/metodologia/page.tsx`, la pagina «Metodologia» del sito.
+`app/metodologia/page.tsx`, la pagina «Metodologia» del sito. Cosa è
+cambiato, dal più recente: [`CHANGELOG.md`](CHANGELOG.md), lo stesso elenco
+della sezione «Novità» nella pagina [Informazioni](https://quantotorna.it/informazioni/#novita).
 
 ## Per chi contribuisce
 
@@ -82,6 +85,9 @@ typecheck` devono passare. Ogni semplificazione fiscale va dichiarata nel
 codice e nella pagina «Metodologia».
 
 - Codice, commenti e messaggi di commit in italiano.
+- Ogni modifica che si vede sul sito va fra le novità, in `lib/novita.ts`
+  (la pagina Informazioni le mostra), e da lì in `CHANGELOG.md` con
+  `npm run changelog`: un test controlla che coincidano.
 - Niente segreti nel codice, nei test o nei commit (token, chiavi,
   password): gli esempi sono inventati.
 - I dati si scaricano una volta al giorno, con la fonte citata in pagina, e

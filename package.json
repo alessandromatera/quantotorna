@@ -9,6 +9,7 @@
     "build": "next build",
     "anteprima": "next build && node scripts/anteprima.mjs",
     "scarica": "tsx scripts/scarica.ts",
+    "changelog": "tsx scripts/changelog.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"

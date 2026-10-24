@@ -141,9 +141,27 @@ describe("metricheCatalogo", () => {
       const [v] = m.variabili;
       expect(v.cedolaStimata).toBe(3);
       expect(v.motivoNonCalcolabile).toBeNull();
-      // Lo stesso titolo a tasso fisso al 3%: stessi flussi, stessa data.
+      // Lo stesso titolo a tasso fisso al 3%, con cedole e rateo ACT/360:
+      // stessi flussi, stessa data.
       const fisso = { ...titolo({ isin: "IT0000000128", cedolaAnnua: 3, prezzo: 101 }), emissione: null };
-      expect(v.ytmLordoPct).toBe(pct(ytmLordo(parametriTitolo(fisso, "2026-10-20"))));
+      expect(v.ytmLordoPct).toBe(
+        pct(ytmLordo({ ...parametriTitolo(fisso, "2026-10-20"), convenzioneCedola: "act360" })),
+      );
+    });
+
+    it("cedola e rateo ACT/360: 2,93% lordo e 2,53% netto", () => {
+      // CCTeu inventato con scadenza 15/04/2032 e spread 1,00% sull'Euribor
+      // al 2,10%, a 101,20 il 23/10/2026: regolamento il 27/10/2026.
+      const t = titolo({ isin: "IT0000000201", ...cct, spread: 1, prezzo: 101.2, dataScadenza: "2032-04-15" });
+      const m = metricheCatalogo(catalogo([t], { data: "2026-10-23" }));
+      const [v] = m.variabili;
+      expect(v.cedolaStimata).toBe(3.1);
+      expect(v.ytmLordoPct).toBe(2.93);
+      expect(v.ytmNettoPct).toBe(2.53);
+      // È la riga del catalogo a dare la convenzione al motore.
+      expect(parametriTitolo({ ...t, emissione: null }, "2026-10-23").convenzioneCedola).toBe("act360");
+      expect(parametriTitolo({ ...titolo({ isin: "IT0000000011" }), emissione: null }, "2026-10-23").convenzioneCedola)
+        .toBeUndefined();
     });
 
     it("senza Euribor resta in elenco col motivo", () => {
@@ -152,6 +170,63 @@ describe("metricheCatalogo", () => {
       );
       expect(m.variabili[0].ytmNettoPct).toBeNull();
       expect(m.variabili[0].motivoNonCalcolabile).toMatch(/Euribor/);
+    });
+  });
+
+  describe("BTP Valore Insieme: una cedola sola, a scadenza", () => {
+    // BTP inventato: cedola unica del 22,70% a scadenza, godimento
+    // 27/10/2026, scadenza 27/10/2031, a 100 il 23/10/2026 (regolamento il
+    // 27/10, rateo zero).
+    const insieme = (definitiva: boolean, percentuale = definitiva ? 22.7 : 22.25) =>
+      titolo({
+        isin: "IT0000000219",
+        nome: "Btp Valore Insieme Inventato",
+        tipo: "cedolaUnica",
+        cedolaAnnua: 0,
+        dataScadenza: "2031-10-27",
+        prezzo: 100,
+        cedolaUnica: { percentuale, definitiva, godimento: "2026-10-27" },
+      });
+
+    it("con la cedola definitiva: 4,18% lordo e 3,69% netto, come Borsa Italiana", () => {
+      // Borsa Italiana scrive 4,17% e 3,69% a 100: 1,227^(1/5) − 1 = 4,176%,
+      // e al netto (22,70% × 0,875 = 19,8625%) 3,690%.
+      const m = metricheCatalogo(catalogo([insieme(true)], { data: "2026-10-23" }));
+      expect(m.flussiNoti).toEqual([]);
+      const [r] = m.cedoleUniche;
+      expect(r.motivoNonCalcolabile).toBeNull();
+      expect(r.metriche!.ytmLordoPct).toBe(4.18);
+      expect(r.metriche!.ytmNettoPct).toBe(3.69);
+      // 2.270 € lordi, 1.986,25 € netti sui 10.000 nominali comprati a 100.
+      expect(r.metriche!.rendimentoNominale).toMatchObject({ incassi: 1_198_625, guadagno: 198_625 });
+      expect(r.metriche!.durationModificata).toBeGreaterThan(4.7);
+    });
+
+    it("col minimo del collocamento resta in elenco senza rendimento, col motivo", () => {
+      const m = metricheCatalogo(catalogo([insieme(false)], { data: "2026-10-23" }));
+      const [r] = m.cedoleUniche;
+      expect(r.metriche).toBeNull();
+      expect(r.motivoNonCalcolabile).toMatch(/minimo.*22,25%/);
+    });
+
+    it("la riga si rifà con le condizioni di chi guarda", () => {
+      const c = catalogo([insieme(true)], { data: "2026-10-23" });
+      const m = metricheCatalogo(c);
+      const tariffa = { percentuale: 0.19, minimo: 295, massimo: 1_900, fisso: 0 };
+      const con = righeConCondizioni(m, c.euribor6m, { nominale: 10_000, tariffa });
+      expect(con.cedoleUniche[0].metriche!.ytmNettoPct!).toBeLessThan(m.cedoleUniche[0].metriche!.ytmNettoPct!);
+      expect(righeConCondizioni(m, c.euribor6m, CONDIZIONI_RIFERIMENTO).cedoleUniche).toEqual(m.cedoleUniche);
+    });
+
+    it("al motore arriva come una cedola sola, con il rateo in 30E/360", () => {
+      const p = parametriTitolo({ ...insieme(true), emissione: null }, "2026-10-23");
+      expect(p).toMatchObject({
+        cedolaAnnua: 22.7 / 5,
+        frequenzaCedola: 0.2,
+        convenzioneCedola: "30E360",
+        dataEmissione: "2026-10-27",
+      });
+      expect(() => parametriTitolo({ ...insieme(false), emissione: null }, "2026-10-23")).toThrow(/definitiva/);
     });
   });
 

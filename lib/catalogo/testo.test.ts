@@ -71,3 +71,35 @@ describe("llmsTxt", () => {
     expect(testo).toContain("2 titoli, prezzi di chiusura del 20/10/2026");
   });
 });
+
+describe("la cedola unica in Markdown", () => {
+  const conInsieme = metricheCatalogo({
+    ...catalogo,
+    titoli: [
+      ...catalogo.titoli,
+      titolo({
+        isin: "IT0000000037",
+        nome: "Btp Valore Insieme Inventato",
+        tipo: "cedolaUnica",
+        cedolaAnnua: 0,
+        dataScadenza: "2031-10-27",
+        prezzo: 100,
+        cedolaUnica: { percentuale: 22.25, definitiva: false, godimento: "2026-10-27" },
+      }),
+    ],
+  });
+
+  it("ha la sua tabella, col minimo dichiarato e il motivo al posto del rendimento", () => {
+    const testo = rendimentiInMarkdown(conInsieme);
+    expect(testo).toContain("## Cedola unica, BTP Valore Insieme (1 titoli)");
+    const riga = testo.split("\n").find((r) => r.includes("IT0000000037"))!;
+    expect(riga).toContain("minimo 22,25%");
+    expect(riga).toMatch(/— \(Borsa Italiana non ha ancora pubblicato la cedola definitiva/);
+    // Senza titoli a cedola unica la sezione non c'è.
+    expect(rendimentiInMarkdown(m)).not.toContain("Cedola unica");
+  });
+
+  it("entra nel conto dei titoli", () => {
+    expect(llmsTxt(conInsieme)).toContain("3 titoli, prezzi di chiusura");
+  });
+});

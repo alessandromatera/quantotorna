@@ -1,8 +1,10 @@
 import { commissione, type TariffaMercato } from "../costi/commissioni";
 import type { Centesimi } from "../money";
 import { controvaloreCents } from "../tax/lifo";
+import { primaCedolaCorta } from "./cedole";
 import {
   capitalGainRimborso,
+  cedolare,
   cedoleFuture,
   creditoDisaggio,
   esborsoNetto,
@@ -54,7 +56,15 @@ export interface Simulazione {
     nettaPeriodo: Centesimi;
     totaleNetto: Centesimi;
     perAnno: number;
-    /** Cedole consecutive uguali: più di un gruppo solo sugli step-up. */
+    /**
+     * La prossima è la prima del titolo, ed è corta: matura dal godimento.
+     * È il primo gruppo, da sola.
+     */
+    primaCorta: boolean;
+    /**
+     * Cedole consecutive uguali: più di un gruppo sugli step-up e dopo una
+     * prima cedola corta.
+     */
     gruppi: { numero: number; lorda: Centesimi; netta: Centesimi; dal: string }[];
   };
   rimborso: {
@@ -111,6 +121,7 @@ export function simulaAcquisto(base: ParametriBond, tariffa: TariffaMercato): Si
       nettaPeriodo: cedole[0]?.netta ?? 0,
       totaleNetto: cedole.reduce((somma, c) => somma + c.netta, 0),
       perAnno: p.frequenzaCedola,
+      primaCorta: cedole.length > 0 && cedole[0].data === primaCedolaCorta(cedolare(p)),
       gruppi: gruppiDiCedole(cedole),
     },
     rimborso: {

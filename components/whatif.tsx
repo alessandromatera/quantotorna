@@ -429,7 +429,13 @@ function ContoUscita({ esito, quantita }: { esito: EsitoUscita; quantita: number
   }
   if (esito.impostaCedoleRateo > 0) {
     righe.push({
-      voce: esito.rateoVendita > 0 ? "Imposta su cedole e rateo" : "Imposta sulle cedole",
+      // Prima della prima cedola, o sulla cedola unica, c'è solo il rateo.
+      voce:
+        esito.rateoVendita === 0
+          ? "Imposta sulle cedole"
+          : esito.cedoleLorde === 0
+            ? "Imposta sul rateo"
+            : "Imposta su cedole e rateo",
       importo: esito.impostaCedoleRateo,
       segno: "−",
     });

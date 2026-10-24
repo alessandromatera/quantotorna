@@ -5,7 +5,7 @@ import {
   formatPrezzoMot,
 } from "../client/format";
 import { URL_CODICE, URL_SITO } from "../sito";
-import { NOMINALE_RIFERIMENTO, type MetricheCatalogo } from "./metriche";
+import { NOMINALE_RIFERIMENTO, titoliInElenco, type MetricheCatalogo } from "./metriche";
 
 /**
  * Il sito in testo semplice, per chi lo legge senza browser: i modelli
@@ -108,11 +108,36 @@ export function rendimentiInMarkdown(m: MetricheCatalogo): string {
       ]),
     ),
     "",
+    ...(m.cedoleUniche.length === 0
+      ? []
+      : [
+          `## Cedola unica, BTP Valore Insieme (${m.cedoleUniche.length} titoli)`,
+          "",
+          "Una cedola sola, in percentuale del nominale, pagata a scadenza insieme al capitale; il " +
+            "rateo matura in 30E/360. Il rendimento si calcola solo con la cedola definitiva.",
+          "",
+          tabella(
+            ["Titolo", "ISIN", "Scadenza", "Cedola unica", "Prezzo", "YTM netto", "YTM lordo", `Guadagno netto su ${nominale} nominali`],
+            m.cedoleUniche.map((t) => [
+              t.nome,
+              t.isin,
+              formatDataIT(t.dataScadenza),
+              t.cedolaUnica.definitiva
+                ? formatPct(t.cedolaUnica.percentuale)
+                : `minimo ${formatPct(t.cedolaUnica.percentuale)}`,
+              formatPrezzoMot(t.prezzo),
+              t.metriche ? pctONulla(t.metriche.ytmNettoPct) : `— (${t.motivoNonCalcolabile ?? "non calcolabile"})`,
+              t.metriche ? pctONulla(t.metriche.ytmLordoPct) : "—",
+              t.metriche?.rendimentoNominale ? formatEuro(t.metriche.rendimentoNominale.guadagno) : "—",
+            ]),
+          ),
+          "",
+        ]),
   ].join("\n");
 }
 
 export function llmsTxt(m: MetricheCatalogo): string {
-  const quanti = m.flussiNoti.length + m.variabili.length + m.indicizzati.length;
+  const quanti = titoliInElenco(m);
   return [
     "# quantotorna",
     "",
@@ -140,7 +165,7 @@ export function llmsTxt(m: MetricheCatalogo): string {
     "",
     `- [Titoli](${URL_SITO}/): la tabella di tutti i titoli con YTM netto e lordo, plusvalenza a rimborso, netto a scadenza, duration e scambi`,
     `- [Metodologia](${URL_SITO}/metodologia/): come si fanno i conti, le imposte, le semplificazioni, le fonti e le verifiche`,
-    `- [Informazioni](${URL_SITO}/informazioni/): chi fa il sito, da dove vengono i dati, le avvertenze`,
+    `- [Informazioni](${URL_SITO}/informazioni/): chi fa il sito, da dove vengono i dati, le avvertenze, cosa è cambiato`,
     "",
     "## Dati",
     "",

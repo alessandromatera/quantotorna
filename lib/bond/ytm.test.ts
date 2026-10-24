@@ -651,3 +651,52 @@ describe("step-up: allineamento con il calcolo di riferimento", () => {
     expect(ytmNetto(perAcquisto(aGradino))).toBe(ytmNetto(perAcquisto(fisso)));
   });
 });
+
+/** Frazione → percentuale a due decimali, come la mostra la pagina. */
+const percento = (v: number | null) => (v == null ? null : Math.round(v * 10_000) / 100);
+
+describe("CCTeu: cedola e rateo ACT/360, come li calcola il Tesoro", () => {
+  // CCTeu inventato: scadenza 15/04/2032, cedola stimata 3,10% (Euribor
+  // 2,10% + spread 1,00%), comprato il 23/10/2026 a 101,20: regolamento il
+  // 27/10/2026.
+  const cct = perAcquisto({
+    categoria: "btpFisso",
+    quantita: 10_000,
+    prezzo: 101.2,
+    prezzoCarico: 101.2,
+    cedolaAnnua: 3.1,
+    frequenzaCedola: 2,
+    convenzioneCedola: "act360",
+    dataScadenza: "2032-04-15",
+    dataRiferimento: "2026-10-23",
+  });
+  const { convenzioneCedola: _, ...actAct } = cct;
+
+  it("rateo: 10.000 × 3,10% × 12/360 = 10,33 €, non 10,22 €", () => {
+    expect(cct.dataRiferimento).toBe("2026-10-27");
+    expect(rateoAllaData(cct)).toBe(1033);
+    expect(rateoAllaData(actAct)).toBe(1022);
+    expect(stornoImpostaRateo(cct)).toBe(129);
+  });
+
+  it("2,93% lordo e 2,53% netto, contro 2,88% e 2,49% in ACT/ACT", () => {
+    expect(percento(ytmLordo(cct))).toBe(2.93);
+    expect(percento(ytmNetto(cct))).toBe(2.53);
+    expect(percento(ytmLordo(actAct))).toBe(2.88);
+    expect(percento(ytmNetto(actAct))).toBe(2.49);
+  });
+
+  it("le cedole future variano coi giorni del semestre", () => {
+    const cedole = cedoleFuture(cct);
+    expect(cedole[0]).toMatchObject({ data: "2027-04-15", lorda: 15_672 });
+    expect(cedole[1]).toMatchObject({ data: "2027-10-15", lorda: 15_758 });
+    expect(new Set(cedole.map((c) => c.lorda)).size).toBeGreaterThan(1);
+  });
+
+  it("duration e sensibilità con la stessa convenzione", () => {
+    // A shock nullo il riprezzamento torna al prezzo solo se il rateo che
+    // toglie è quello del tel quel da cui è uscito lo YTM.
+    expect(sensibilitaTassi(cct, [0])![0].prezzo).toBeCloseTo(101.2, 3);
+    expect(analisiDuration(cct)!.ytmLordo).toBe(ytmLordo(cct));
+  });
+});

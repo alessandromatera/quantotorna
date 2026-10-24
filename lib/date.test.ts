@@ -6,6 +6,7 @@ import {
   anniTraActAct,
   dataRegolamento,
   formatDataIT,
+  giorni30E360,
   giorniTra,
   giornoDeiPrezzi,
 } from "./date";
@@ -30,6 +31,21 @@ describe("aritmetica sulle date ISO", () => {
 
   it("formatDataIT", () => {
     expect(formatDataIT("2026-07-23")).toBe("23/07/2026");
+  });
+});
+
+describe("giorni30E360", () => {
+  it("ogni mese conta 30 giorni, e il 31 vale 30", () => {
+    // 27/10 → 30/11: 30 + 3 = 33 giorni, contro i 34 veri.
+    expect(giorni30E360("2026-10-27", "2026-11-30")).toBe(33);
+    expect(giorni30E360("2026-01-31", "2026-02-28")).toBe(28);
+    expect(giorni30E360("2026-02-28", "2026-03-31")).toBe(32);
+    expect(giorni30E360("2026-05-31", "2026-07-31")).toBe(60);
+  });
+
+  it("cinque anni sono 1.800 giorni, anche col 29 febbraio in mezzo", () => {
+    expect(giorni30E360("2026-10-27", "2031-10-27")).toBe(1800);
+    expect(giorniTra("2026-10-27", "2031-10-27")).toBe(1826);
   });
 });
 

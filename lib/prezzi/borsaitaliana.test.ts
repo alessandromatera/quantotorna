@@ -212,7 +212,7 @@ describe("parseListaBtp", () => {
     expect(per("IT0005580045")!.cedolaListino).toBe(1.6);
   });
 
-  it("scarta il BTP Valore Insieme: una cedola sola a scadenza", () => {
+  it("tiene il BTP Valore Insieme come cedola unica: la cedola viene dalla scheda", () => {
     const insieme = parseListaBtp(`<table><tr>
       <td><a href="/borsa/obbligazioni/mot/btp/scheda/IT0005735227-MOTX.html?lang=it"><strong>IT0005735227 - </strong></a></td>
       <td><span>Btp Valore Insieme Oc Oct31 Eur</span></td>
@@ -221,8 +221,9 @@ describe("parseListaBtp", () => {
       <td>27/10/2031</td>
       <td></td>
     </tr></table>`);
-    expect(insieme.righe).toHaveLength(0);
-    expect(insieme.scartate[0].motivo).toMatch(/Valore Insieme.*una sola cedola/);
+    expect(insieme.scartate).toEqual([]);
+    expect(insieme.righe).toHaveLength(1);
+    expect(insieme.righe[0]).toMatchObject({ tipo: "cedolaUnica", cedolaAnnua: 0, dataScadenza: "2031-10-27" });
   });
 
   it("HTML irriconoscibile → zero righe (l'aggiornamento fallirà in modo visibile)", () => {

@@ -63,6 +63,11 @@ export type CategoriaStrumento = (typeof CATEGORIE_STRUMENTO)[number];
  *   calcola cedola per cedola. Il listino pubblica solo la cedola in corso,
  *   quindi il piano viene dalla scheda di Borsa Italiana o da
  *   lib/mercato/stepup.ts.
+ * - `cedolaUnica`: BTP Valore Insieme. Una cedola sola, in percentuale del
+ *   nominale, pagata a scadenza insieme al capitale; il rateo matura in
+ *   30E/360 su tutto il periodo. Il listino non la pubblica: viene dalla
+ *   scheda di Borsa Italiana (lib/mercato/cedola-unica.ts), e finché è il
+ *   minimo del collocamento il rendimento non si calcola.
  */
 export const TIPI_CATALOGO = [
   "fisso",
@@ -72,5 +77,6 @@ export const TIPI_CATALOGO = [
   "indicizzatoEuro",
   "italia",
   "stepUp",
+  "cedolaUnica",
 ] as const;
 export type TipoCatalogo = (typeof TIPI_CATALOGO)[number];

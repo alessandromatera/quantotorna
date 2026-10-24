@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Mercato } from "@/components/mercato";
 import { Dati, Dato, Testata } from "@/components/ui";
 import { caricaCatalogo } from "@/lib/catalogo/file";
-import { metricheCatalogo } from "@/lib/catalogo/metriche";
+import { metricheCatalogo, titoliInElenco } from "@/lib/catalogo/metriche";
 import { formatDataIT, formatMeseIT, formatPct } from "@/lib/client/format";
 import { AUTORE, URL_SITO } from "@/lib/sito";
 
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export default function Pagina() {
   const catalogo = caricaCatalogo();
   const metriche = metricheCatalogo(catalogo);
-  const quanti = metriche.flussiNoti.length + metriche.variabili.length + metriche.indicizzati.length;
+  const quanti = titoliInElenco(metriche);
   /*
    * Per i motori di ricerca: il sito, e i numeri del giorno come insieme di
    * dati (lo legge anche Google Dataset Search), con i due file da scaricare.

@@ -53,6 +53,17 @@ export function giorniTra(a: string, b: string): number {
   );
 }
 
+/**
+ * Giorni da `a` a `b` in 30E/360 (ISMA): ogni mese conta 30 giorni e il 31
+ * vale 30, quindi un anno ne ha 360 anche se è bisestile. È la base del
+ * rateo del BTP Valore Insieme (lib/bond/cedole.ts).
+ */
+export function giorni30E360(a: string, b: string): number {
+  const [a1, m1, g1] = a.split("-").map(Number);
+  const [a2, m2, g2] = b.split("-").map(Number);
+  return 360 * (a2 - a1) + 30 * (m2 - m1) + (Math.min(g2, 30) - Math.min(g1, 30));
+}
+
 /** Anni tra due date, convenzione ACT/365. */
 export function anniTra(a: string, b: string): number {
   return giorniTra(a, b) / 365;

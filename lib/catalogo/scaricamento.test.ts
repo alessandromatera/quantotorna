@@ -323,4 +323,75 @@ describe("aggiornaCatalogo", () => {
     // Il nuovo, senza scheda, resta fuori col motivo.
     expect(rapporto.scartate.map((s) => s.isin)).toEqual(["IT0000000060"]);
   });
+
+  describe("BTP Valore Insieme: la cedola unica dalla scheda di Borsa Italiana", () => {
+    const insieme = riga("IT0000000078", {
+      nome: "Btp Valore Insieme Inventato",
+      tipo: "cedolaUnica",
+      cedolaAnnua: 0,
+      dataScadenza: "2031-10-27",
+      prezzo: 100,
+    });
+    const listini = async () => ({ righe: [insieme], scartate: [], pagine: 1 });
+    const scheda = (descrizione: string) => async () => ({
+      godimento: "2026-10-27",
+      periodicita: null,
+      descrizione,
+    });
+
+    it("durante il collocamento resta in catalogo col minimo, che non è definitivo", async () => {
+      const { catalogo } = await aggiornaCatalogo(
+        null,
+        fonti({
+          listini,
+          schedaStepUp: scheda(
+            "L'importo minimo della cedola è pari al 22,25% del valore nominale del prestito e verrà pagata in un'unica soluzione a scadenza",
+          ),
+        }),
+        opzioni,
+      );
+      expect(catalogo.titoli[0].cedolaUnica).toEqual({
+        percentuale: 22.25,
+        definitiva: false,
+        godimento: "2026-10-27",
+      });
+      // Il catalogo scritto si rilegge.
+      expect(leggiCatalogo(JSON.parse(JSON.stringify(catalogo))).titoli[0].cedolaUnica).toEqual(
+        catalogo.titoli[0].cedolaUnica,
+      );
+    });
+
+    it("una cedola definitiva di ieri si tiene, senza rileggere la scheda", async () => {
+      const definitiva = { percentuale: 22.7, definitiva: true, godimento: "2026-10-27" };
+      const { catalogo } = await aggiornaCatalogo(
+        ieri({
+          titoli: [
+            {
+              isin: "IT0000000078",
+              nome: "Btp Valore Insieme Inventato",
+              tipo: "cedolaUnica",
+              emittente: "IT",
+              cedolaAnnua: 0,
+              frequenzaCedola: 2,
+              dataScadenza: "2031-10-27",
+              prezzo: 100,
+              spread: null,
+              gradiniCedola: null,
+              cedolaUnica: definitiva,
+              scambi: null,
+            },
+          ],
+        }),
+        fonti({ listini }),
+        opzioni,
+      );
+      expect(catalogo.titoli[0].cedolaUnica).toEqual(definitiva);
+    });
+
+    it("senza scheda e senza ieri resta fuori col motivo", async () => {
+      const { catalogo, rapporto } = await aggiornaCatalogo(null, fonti({ listini }), opzioni);
+      expect(catalogo.titoli).toEqual([]);
+      expect(rapporto.scartate[0]).toMatchObject({ isin: "IT0000000078" });
+    });
+  });
 });

@@ -10,6 +10,8 @@ import { controvaloreCents } from "../tax/lifo";
 import {
   cedoleLordeTra,
   rateoMaturato,
+  type Cedolare,
+  type ConvenzioneCedola,
   type GradinoCedola,
 } from "./cedole";
 
@@ -20,7 +22,14 @@ import {
  *
  * Ipotesi documentate:
  * - attualizzazione ACT/ACT, capitalizzazione annua composta;
- * - per i CCTeu le cedole future sono assunte costanti pari all'ultima nota;
+ * - per i CCTeu il tasso delle cedole future è assunto costante pari
+ *   all'ultimo noto; cedole e rateo si contano ACT/360, come fa il Tesoro
+ *   (`convenzioneCedola`);
+ * - il BTP Valore Insieme paga una cedola sola, a scadenza: per il motore è
+ *   un periodo cedolare lungo quanto il titolo, col rateo in 30E/360;
+ * - la prima cedola dopo il godimento può essere corta: matura dalla data di
+ *   godimento (`dataEmissione`), non dalla data teorica precedente. La prima
+ *   cedola lunga non si riconosce (vedi lib/bond/cedole.ts);
  * - sugli step-up (BTP Valore, Più, Futura) ogni cedola è quella del suo
  *   gradino (`gradiniCedola`); il premio fedeltà NON entra, perché spetta
  *   solo a chi ha sottoscritto all'emissione e tiene il titolo fino alla
@@ -74,6 +83,11 @@ export interface ParametriBond {
    * del proprio periodo e `cedolaAnnua` non entra nei conti.
    */
   gradiniCedola?: GradinoCedola[];
+  /**
+   * Come si contano cedole e rateo (lib/bond/cedole.ts). Default `actAct`;
+   * `act360` sui CCTeu, `30E360` sul BTP Valore Insieme.
+   */
+  convenzioneCedola?: ConvenzioneCedola;
   dataScadenza: string;
   /** ISO: data a cui valutare (per un acquisto, la data di regolamento). */
   dataRiferimento: string;
@@ -82,8 +96,7 @@ export interface ParametriBond {
   /**
    * Centesimi: rateo lordo effettivamente pagato, quando è noto (per esempio
    * se l'intermediario lo conta su un'altra data valuta). Sostituisce quello
-   * calcolato ACT/ACT alla data di riferimento, e con lui lo storno
-   * dell'imposta.
+   * calcolato alla data di riferimento, e con lui lo storno dell'imposta.
    */
   rateo?: Centesimi;
   /**
@@ -96,6 +109,8 @@ export interface ParametriBond {
    * disaggio (vedi sopra); sopra la pari non c'è disaggio.
    * Uno solo dei due non basta: il disaggio si ripartisce nel tempo e senza
    * la data non si sa da quando.
+   * La data da sola decide anche da quando matura la prima cedola: se cade
+   * fra due date del calendario, la prima cedola è corta.
    */
   prezzoEmissione?: number;
   dataEmissione?: string;
@@ -349,14 +364,21 @@ export function creditiAcquisto(
   return { stornoRateo, creditoDisaggio, impostaScarto, totale: stornoRateo + creditoDisaggio };
 }
 
-/** Il piano cedolare del titolo, nella forma che vuole lib/bond/cedole.ts. */
-function cedolare(p: ParametriBond) {
+/**
+ * Il piano cedolare del titolo, nella forma che vuole lib/bond/cedole.ts:
+ * gradini, convenzione e godimento compresi. L'unico punto in cui si
+ * costruisce, così ogni conto — YTM, «Se lo compro», «Se esco prima»,
+ * sensibilità ai tassi — usa lo stesso calendario e gli stessi importi.
+ */
+export function cedolare(p: ParametriBond): Cedolare {
   return {
     quantita: p.quantita,
     cedolaAnnua: p.cedolaAnnua,
     frequenzaCedola: p.frequenzaCedola,
     dataScadenza: p.dataScadenza,
     gradini: p.gradiniCedola,
+    convenzione: p.convenzioneCedola,
+    godimento: p.dataEmissione,
   };
 }
 
@@ -372,7 +394,7 @@ export interface Cedola {
  * con la sua imposta del 12,5% e netta.
  * Il motore le tassa tutte per intero, anche la prima dopo un acquisto: il
  * rateo pagato è già stornato all'acquisto. Sono uguali fra loro tranne che
- * sugli step-up.
+ * sugli step-up, sui CCTeu (ACT/360) e nella prima cedola corta.
  */
 export function cedoleFuture(p: ParametriBond): Cedola[] {
   return cedoleLordeTra(cedolare(p), p.dataRiferimento, p.dataScadenza).map((c) => {

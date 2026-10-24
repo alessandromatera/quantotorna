@@ -106,6 +106,19 @@ export default function Metodologia() {
               motore la toglie dall'esborso.
             </li>
             <li>
+              Le date delle cedole si ricostruiscono all'indietro dalla scadenza e si fermano
+              alla <strong>data di godimento</strong>, quando la si conosce: è la stessa data di
+              emissione che serve per il disaggio. Su un titolo appena emesso la prima cedola può
+              essere <strong>corta</strong>: matura dal godimento, e vale la cedola piena per i
+              giorni dal godimento allo stacco diviso per i giorni del periodo intero (ACT/ACT, la
+              convenzione dei BTP); il rateo matura dal godimento allo stesso modo. Semplificazione: la prima
+              cedola <strong>lunga</strong>, che salta il primo stacco del calendario e paga al
+              secondo, non si riconosce, perché le fonti non danno la data della prima cedola. Il
+              motore la conta come una cedola corta al primo stacco più una piena al secondo: il
+              totale è lo stesso, cambiano il giorno in cui arriva la quota in più e il rateo fra i
+              due stacchi.
+            </li>
+            <li>
               Lo <strong>YTM lordo</strong> è prima delle imposte, il <strong>netto</strong> dopo:
               cedole al 12,5%, imposta sul disaggio di emissione e sulla plusvalenza a rimborso. Lo
               «<strong>senza CG</strong>» toglie solo l'imposta sulla plusvalenza: è quello di
@@ -209,8 +222,12 @@ export default function Metodologia() {
               <strong>CCTeu</strong>: la cedola è l'Euribor 6 mesi più lo spread scritto nel
               nome. Il rendimento suppone che l'Euribor resti per sempre quello di oggi (la media
               mensile della BCE): è un'ipotesi falsa, dichiarata accanto, che serve solo a
-              metterli sulla stessa scala del tasso fisso. Niente duration né «Se esco prima»: il
-              prezzo di un variabile non si muove coi tassi come quello di un fisso.
+              metterli sulla stessa scala del tasso fisso. Cedole e rateo si contano come li conta
+              il Tesoro, in <strong>ACT/360</strong>: ogni cedola semestrale è nominale × tasso ×
+              giorni effettivi del semestre / 360, quindi cambia coi giorni del semestre (da 181 a
+              184), e il rateo è nominale × tasso × giorni dall'ultima cedola / 360. Niente duration
+              né «Se esco prima»: il prezzo di un variabile non si muove coi tassi come quello di
+              un fisso.
             </li>
             <li>
               <strong>BTP€i</strong>: prezzo e cedola sono reali, quindi gli stessi conti danno un
@@ -226,8 +243,15 @@ export default function Metodologia() {
               in elenco per essere riconosciuti, senza rendimento.
             </li>
             <li>
-              <strong>BTP Valore Insieme</strong> (una sola cedola, a scadenza) non è ancora
-              modellato e resta fuori, col motivo.
+              <strong>BTP Valore Insieme</strong>: una cedola sola, in percentuale del nominale,
+              pagata a scadenza insieme al capitale. Per il motore è un periodo cedolare lungo quanto
+              il titolo: il rateo matura dal godimento in <strong>30E/360</strong> (mesi da 30
+              giorni, cinque anni da 1.800), come scrive la scheda di Borsa Italiana, e chi compra
+              paga il rateo con lo storno del 12,5% come su ogni BTP. La cedola viene dalla scheda
+              di Borsa Italiana: durante il collocamento c'è solo il minimo garantito, che alla
+              chiusura può solo salire, e finché la scheda non scrive la cedola definitiva il titolo
+              resta in elenco senza rendimento. Il premio fedeltà, se c'è, spetta solo a chi ha
+              sottoscritto all'emissione e non entra.
             </li>
           </Elenco>
         </Sezione>
@@ -328,6 +352,12 @@ export default function Metodologia() {
               20 ottobre 2026: step-up identici in 11 casi su 11 per date, cedole, rateo e storno, e
               stesso rendimento lordo. Resta il mezzo centesimo dell'imposta sulle cedole (il
               riferimento tronca, il motore arrotonda) e la quota del 48,08% sulla plusvalenza.
+            </li>
+            <li>
+              24 ottobre 2026: le prime cedole dei nove titoli a tasso fisso appena emessi, con
+              data e importo pubblicati da onvista (dati WM Datenservice). Identiche al centesimo
+              in sette casi; negli altri due, un Bund e uno Schatz, la prima cedola è lunga e il
+              motore la conta come corta più piena (vedi sopra).
             </li>
             <li>
               Esclusi dal confronto, col motivo: i BTP Valore ancora in collocamento, con i tassi

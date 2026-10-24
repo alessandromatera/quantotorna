@@ -174,7 +174,7 @@ function numeroFlessibile(testo: string): number | null {
  *   "Btpi Tf 1,25% St32 Eur" · "Btpi-15st26 3,1%"                       → BTP€i
  *   "Btp Italia Mz28 Eur"                                              → BTP Italia
  *   "Btp Valore Gn27 Eur" · "Btp Futura Ap37 Eur" · "Btp Piu' Sc Fb33 Eur" → step-up
- *   "Btp Valore Insieme Oc Oct31 Eur"                                  → scartato
+ *   "Btp Valore Insieme Oc Oct31 Eur"                                  → cedola unica
  *
  * Il riconoscimento è per PREFISSO e non per sottostringa: il vecchio filtro
  * cercava "btpi" ovunque nel nome e così lasciava passare "Btp Italia" (che
@@ -217,16 +217,12 @@ function classificaEsteroDalNome(nome: string): TipoCatalogo {
   return "fisso";
 }
 
-function classificaDalNome(nome: string): TipoCatalogo | { scarta: string } {
+function classificaDalNome(nome: string): TipoCatalogo {
   if (/strip/i.test(nome)) return "zeroCoupon";
   // Il BTP Valore Insieme (ottobre 2026) non ha gradini: una cedola sola,
-  // pagata a scadenza, con base 30E/360. Il motore non lo modella ancora.
-  if (/\bvalore\s+insieme\b/i.test(nome)) {
-    return {
-      scarta:
-        "BTP Valore Insieme: una sola cedola pagata a scadenza, struttura che il motore non gestisce ancora",
-    };
-  }
+  // pagata a scadenza, con base 30E/360. La cedola la dà la scheda
+  // (lib/mercato/cedola-unica.ts). Prima di «valore», che è uno step-up.
+  if (/\bvalore\s+insieme\b/i.test(nome)) return "cedolaUnica";
   // Il BTP Più (2025) è uno step-up come Valore e Futura: sul listino il nome
   // non porta la cedola, e la colonna dà solo il gradino in corso. Letto
   // come tasso fisso usciva con metà cedola (1,425% invece di 2,85% → 3,7%)
@@ -318,10 +314,6 @@ export function parseListaBtp(
       : tipoListino === "daNome"
         ? classificaDalNome(nome)
         : tipoListino;
-    if (typeof tipo !== "string") {
-      scartate.push({ isin, motivo: `${tipo.scarta} (${nome})` });
-      continue;
-    }
     if (prezzo == null || prezzo <= 0) {
       scartate.push({ isin, motivo: "prezzo assente (non scambiato)" });
       continue;
@@ -349,7 +341,9 @@ export function parseListaBtp(
       });
       continue;
     }
-    const senzaCedola = tipo === "zeroCoupon" || tipo === "bot" || tipo === "ccteu";
+    // Sulla cedola unica la colonna è vuota: la cedola arriva dalla scheda.
+    const senzaCedola =
+      tipo === "zeroCoupon" || tipo === "bot" || tipo === "ccteu" || tipo === "cedolaUnica";
     // Sul listino estero alcuni nomi portano la cedola in fondo e senza il
     // «%», con la colonna vuota: «Bund Lg28 Eur 4,75», «Oat Apr35 Eur 4,75»,
     // «Eib Mz42 Eur 3,625» (quindici titoli il 20/10/2026, prima scartati).

@@ -45,19 +45,24 @@ export function RendimentiAcquisto({
       importo: s.costoNetto,
     });
   }
-  const cadenza = CADENZA[cedole.perAnno] ?? `${cedole.perAnno} l'anno`;
+  // Meno di una l'anno è la cedola unica del BTP Valore Insieme.
+  const cadenza =
+    CADENZA[cedole.perAnno] ?? (cedole.perAnno < 1 ? "a scadenza" : `${cedole.perAnno} l'anno`);
   if (cedole.gruppi.length > 1) {
-    // Step-up: dire «N cedole da X» con la prima sarebbe falso per tutte le
-    // altre. Ogni gradino con quante cedole paga e da quando.
+    // Step-up, o prima cedola corta: dire «N cedole da X» con la prima
+    // sarebbe falso per tutte le altre. Ogni gruppo con quante cedole paga e
+    // da quando; la cedola corta matura dal godimento.
+    const crescenti = cedole.gruppi.length > (cedole.primaCorta ? 2 : 1);
     righe.push({
       voce: (
         <>
-          {cedole.numero} cedole nette, crescenti
+          {cedole.numero} cedole nette{crescenti && ", crescenti"}
           <span className="block text-[var(--inchiostro-muto)]">
             {cedole.gruppi
-              .map(
-                (g) =>
-                  `${g.numero} da ${formatEuro(g.netta)} dal ${formatDataIT(g.dal)}`,
+              .map((g, i) =>
+                i === 0 && cedole.primaCorta
+                  ? `la prima da ${formatEuro(g.netta)} il ${formatDataIT(g.dal)}, corta perché matura dal godimento`
+                  : `${g.numero} da ${formatEuro(g.netta)} dal ${formatDataIT(g.dal)}`,
               )
               .join(", ")}
             , {cadenza}

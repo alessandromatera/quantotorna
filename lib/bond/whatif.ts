@@ -7,6 +7,7 @@ import { calcolaVendita } from "../tax/vendita";
 import type { VoceZainetto } from "../tax/zainetto";
 import { cedoleLordeTra, rateoMaturato } from "./cedole";
 import {
+  cedolare,
   controvaloreTelQuel,
   esborsoNetto,
   impostaDisaggioCessione,
@@ -159,31 +160,17 @@ function prezzoCleanA(p: ParametriBond, data: string, tasso: number): number {
     (somma, f) => somma + f.importo / (1 + tasso) ** anniTraActAct(data, f.data),
     0,
   );
-  const rateo = rateoMaturato({
-    quantita: p.quantita,
-    cedolaAnnua: p.cedolaAnnua,
-    frequenzaCedola: p.frequenzaCedola,
-    dataScadenza: p.dataScadenza,
-    riferimento: data,
-    gradini: p.gradiniCedola,
-  });
+  const rateo = rateoMaturato({ ...cedolare(p), riferimento: data });
   // centesimi sul nominale → base 100
   return (valoreAttuale - rateo) / p.quantita;
 }
 
 /** Cedole lorde staccate in (oggi, uscita]. */
 function cedoleIncassate(p: ParametriBond, dataUscita: string): Centesimi {
-  return cedoleLordeTra(
-    {
-      quantita: p.quantita,
-      cedolaAnnua: p.cedolaAnnua,
-      frequenzaCedola: p.frequenzaCedola,
-      dataScadenza: p.dataScadenza,
-      gradini: p.gradiniCedola,
-    },
-    p.dataRiferimento,
-    dataUscita,
-  ).reduce((somma, c) => somma + c.importo, 0);
+  return cedoleLordeTra(cedolare(p), p.dataRiferimento, dataUscita).reduce(
+    (somma, c) => somma + c.importo,
+    0,
+  );
 }
 
 /** Il lotto che si compra oggi. */
@@ -223,14 +210,7 @@ export function simulaUscita(par: ParametriUscita): EsitoUscita | null {
   const cedoleLorde = cedoleIncassate(bond, dataUscita);
   const rateoVendita = aScadenza
     ? 0
-    : rateoMaturato({
-        quantita: bond.quantita,
-        cedolaAnnua: bond.cedolaAnnua,
-        frequenzaCedola: bond.frequenzaCedola,
-        dataScadenza: bond.dataScadenza,
-        riferimento: dataUscita,
-        gradini: bond.gradiniCedola,
-      });
+    : rateoMaturato({ ...cedolare(bond), riferimento: dataUscita });
   // Cedole e rateo di vendita sono tassati per intero: lo storno dell'imposta
   // sul rateo pagato è già nell'esborso dell'acquisto.
   const redditiCapitale = cedoleLorde + rateoVendita;
@@ -345,17 +325,7 @@ function flussiNettiUscita(
   dataUscita: string,
   incassoNetto: Centesimi,
 ): Flusso[] {
-  const cedole = cedoleLordeTra(
-    {
-      quantita: bond.quantita,
-      cedolaAnnua: bond.cedolaAnnua,
-      frequenzaCedola: bond.frequenzaCedola,
-      dataScadenza: bond.dataScadenza,
-      gradini: bond.gradiniCedola,
-    },
-    bond.dataRiferimento,
-    dataUscita,
-  )
+  const cedole = cedoleLordeTra(cedolare(bond), bond.dataRiferimento, dataUscita)
     .filter((c) => c.data < dataUscita)
     .map((c) => ({
       data: c.data,

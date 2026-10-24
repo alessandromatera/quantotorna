@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Testata } from "@/components/ui";
+import { formatDataIT } from "@/lib/date";
+import { NOVITA } from "@/lib/novita";
 import { AUTORE, OPEN_GRAPH_SITO, URL_CODICE } from "@/lib/sito";
 
 const DESCRIZIONE =
-  "Cos'è quantotorna, chi lo fa, da dove vengono i dati e le avvertenze: non è consulenza finanziaria.";
+  "Cos'è quantotorna, chi lo fa, da dove vengono i dati, le avvertenze (non è consulenza finanziaria) e cosa è cambiato.";
 
 export const metadata: Metadata = {
   title: "Informazioni",
@@ -33,20 +35,21 @@ const link = "text-[var(--accento)] underline underline-offset-2";
 /**
  * Quello che prima stava nel piè di pagina: il sito, chi lo fa, i dati e le
  * avvertenze. Il piè di pagina tiene solo i link e una riga di avvertenza
- * che porta a #avvertenze.
+ * che porta a #avvertenze. In fondo le novità, da lib/novita.ts: le stesse
+ * di CHANGELOG.md.
  */
 export default function Informazioni() {
   return (
     <>
-      <Testata titolo="Informazioni" sottotitolo="Cos'è quantotorna, chi lo fa, da dove vengono i dati e cosa non è." />
+      <Testata titolo="Informazioni" sottotitolo="Cos'è quantotorna, chi lo fa, da dove vengono i dati, cosa non è e cosa è cambiato." />
       <div className="contenitore pt-8">
         <article className="max-w-3xl space-y-10 text-[0.9375rem] leading-relaxed text-[var(--inchiostro-2)] [&_strong]:text-[var(--inchiostro)]">
           <Sezione id="sito" titolo="Cos'è">
             <p>
               Quanto torna davvero un titolo di Stato tenuto fino a scadenza: rendimento netto secondo
               il fisco italiano e cifra finale in euro, per i titoli di Stato quotati sul MOT di Borsa
-              Italiana. BTP a tasso fisso e step-up, BOT, strip, CCTeu, BTP€i e BTP Italia, titoli
-              esteri della white list e sovranazionali.
+              Italiana. BTP a tasso fisso e step-up, BTP Valore Insieme, BOT, strip, CCTeu, BTP€i e
+              BTP Italia, titoli esteri della white list e sovranazionali.
             </p>
           </Sezione>
 
@@ -106,6 +109,22 @@ export default function Informazioni() {
               assume alcuna responsabilità per errori od omissioni, né per l'uso che si fa di queste
               pagine o per le decisioni prese sulla loro base.
             </p>
+          </Sezione>
+
+          <Sezione id="novita" titolo="Novità">
+            <p>Cosa è cambiato nel sito, dal più recente.</p>
+            {NOVITA.map((n) => (
+              <div key={n.data} className="space-y-1.5">
+                <h3 className="font-semibold text-[var(--inchiostro)]">
+                  <time dateTime={n.data}>{formatDataIT(n.data)}</time>
+                </h3>
+                <ul className="list-disc space-y-1.5 pl-5">
+                  {n.voci.map((v) => (
+                    <li key={v}>{v}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </Sezione>
         </article>
       </div>

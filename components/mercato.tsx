@@ -28,6 +28,7 @@ import {
   parametriTitolo,
   righeConCondizioni,
   type MetricheCatalogo,
+  type RigaCedolaUnica,
   type RigaFlussiNoti,
 } from "@/lib/catalogo/metriche";
 import { TIPI_CATALOGO, type TipoCatalogo } from "@/lib/categorie";
@@ -87,8 +88,8 @@ import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
 const COLORE_ITALIA = "var(--serie-1)";
 const COLORE_ESTERO = "var(--serie-5)";
 
-/** Le tre schede del listino: i tre modelli di titolo, che non si confrontano fra loro. */
-type Scheda = "fissi" | "variabili" | "indicizzati";
+/** Le schede del listino: i modelli di titolo, che non si confrontano fra loro. */
+type Scheda = "fissi" | "variabili" | "indicizzati" | "cedoleUniche";
 
 /** Cosa mostra il dettaglio aperto sotto una riga. */
 type Vista = "acquisto" | "uscita";
@@ -280,6 +281,28 @@ const COLONNE_VARIABILI: Colonna[] = [
   COLONNA_SCAMBI,
 ];
 
+/**
+ * Le colonne dei fissi, senza ordinamento (la scheda ha un titolo o due) e
+ * con la cedola che si paga una volta sola.
+ */
+function colonneCedolaUnica(nominale: number): Colonna[] {
+  return colonne(nominale).map(({ ordina: _ordina, ...c }) =>
+    c.chiave === "cedola"
+      ? {
+          ...c,
+          intestazione: (
+            <>
+              <Termine chiave="cedolaUnica">Cedola unica</Termine>
+              <span className="block whitespace-normal font-normal normal-case tracking-normal">
+                a scadenza, su {formatNumero(nominale)} nom.
+              </span>
+            </>
+          ),
+        }
+      : c,
+  );
+}
+
 /** Casella di un anno di scadenza, dentro il menu «Scadenza». */
 function AnnoScadenza({
   etichetta,
@@ -347,6 +370,84 @@ function CellaCedola({
         </Sotto>
       )}
     </Cella>
+  );
+}
+
+/**
+ * La cedola unica in percentuale del nominale e in euro sul nominale della
+ * tabella. Col minimo del collocamento si scrive che è il minimo.
+ */
+function CellaCedolaUnica({ titolo: t, nominale }: { titolo: RigaCedolaUnica; nominale: number }) {
+  const c = t.cedolaUnica;
+  return (
+    <Cella numerica>
+      {c.definitiva ? formatPct(c.percentuale) : `minimo ${formatPct(c.percentuale)}`}
+      <Sotto>
+        {c.definitiva
+          ? `una sola, il ${formatDataIT(t.dataScadenza)} · ${formatEuro(Math.round(nominale * c.percentuale))}`
+          : "definitiva non ancora pubblicata"}
+      </Sotto>
+    </Cella>
+  );
+}
+
+/**
+ * Le celle dei conti di un titolo a flussi noti, dalla plusvalenza a
+ * rimborso alla duration: le stesse nella tabella dei fissi e in quella
+ * della cedola unica.
+ */
+function CelleConti({ titolo: t }: { titolo: RigaFlussiNoti }) {
+  return (
+    <>
+      {/* Nessun colore su questa cella: un differenziale negativo
+          non è un titolo peggiore, è cedola alta pagata in
+          anticipo, e lo YTM netto lo ha già assorbito. */}
+      <Cella numerica>
+        {t.plusRimborso === 0 ? "—" : formatEuroSegno(t.plusRimborso)}
+        {t.plusRimborso !== 0 &&
+          (!t.plusCompensabile ? (
+            <Sotto>fuori dallo zainetto</Sotto>
+          ) : (
+            t.plusRimborso < 0 && <Sotto>minus: alimenta lo zainetto</Sotto>
+          ))}
+      </Cella>
+      <Cella numerica evidenza>
+        <span className="text-[0.9375rem] font-semibold">
+          {t.ytmNettoPct == null ? "—" : formatPct(t.ytmNettoPct)}
+        </span>
+        {t.ytmLordoPct != null && (
+          <Sotto className="whitespace-nowrap">lordo {formatPct(t.ytmLordoPct)}</Sotto>
+        )}
+        {t.ytmLordoPct != null &&
+          t.ytmNettoSenzaCgPct != null &&
+          t.ytmNettoSenzaCgPct !== t.ytmNettoPct && (
+            <Sotto className="whitespace-nowrap">
+              <Termine chiave="ytmNettoSenzaCg">senza CG</Termine>{" "}
+              {formatPct(t.ytmNettoSenzaCgPct)}
+            </Sotto>
+          )}
+      </Cella>
+      <Cella numerica>
+        {t.rendimentoNominale == null ? (
+          "—"
+        ) : (
+          <>
+            {formatEuro(t.rendimentoNominale.incassi)}
+            <span className="block text-xs font-medium text-[var(--delta-buono)]">
+              {formatEuroSegno(t.rendimentoNominale.guadagno)}
+            </span>
+            {/* Sotto l'anno l'annualizzazione di un guadagno di
+                pochi giorni sarebbe fuorviante: solo il totale. */}
+            {t.rendimentoNominale.anni >= 1 && (
+              <Sotto>{formatEuroSegno(t.rendimentoNominale.annuo)}/anno</Sotto>
+            )}
+          </>
+        )}
+      </Cella>
+      <Cella numerica>
+        {t.durationModificata == null ? "—" : formatPrezzo(t.durationModificata)}
+      </Cella>
+    </>
   );
 }
 
@@ -626,12 +727,24 @@ export function Mercato({
         durationModificata: null,
         scambiMediana: r.scambi?.mediana ?? null,
       })),
+      cedoleUniche: righe.cedoleUniche.map((r) => ({
+        ...r,
+        toccaZainetto: descriviTitolo(r).toccaZainetto,
+        rendimentoPct: r.ytmNettoPct,
+        durationModificata: r.metriche?.durationModificata ?? null,
+        scambiMediana: r.scambi?.mediana ?? null,
+      })),
     }),
     [righe],
   );
 
   const tutte = useMemo(
-    () => [...indicizzabili.titoli, ...indicizzabili.variabili, ...indicizzabili.indicizzati],
+    () => [
+      ...indicizzabili.titoli,
+      ...indicizzabili.variabili,
+      ...indicizzabili.indicizzati,
+      ...indicizzabili.cedoleUniche,
+    ],
     [indicizzabili],
   );
   const conteggi = useMemo(() => {
@@ -726,7 +839,8 @@ export function Mercato({
   );
   const variabili = useMemo(() => filtra(indicizzabili.variabili, filtri), [indicizzabili, filtri]);
   const indicizzati = useMemo(() => filtra(indicizzabili.indicizzati, filtri), [indicizzabili, filtri]);
-  const mostrate = titoli.length + variabili.length + indicizzati.length;
+  const cedoleUniche = useMemo(() => filtra(indicizzabili.cedoleUniche, filtri), [indicizzabili, filtri]);
+  const mostrate = titoli.length + variabili.length + indicizzati.length + cedoleUniche.length;
 
   /** Il contesto fiscale di «Se esco prima»: lo zainetto ancora vivo e la lettura del 48,08%. */
   const contesto = useMemo(
@@ -986,6 +1100,16 @@ export function Mercato({
               { valore: "fissi", nome: "Tasso fisso, step-up, strip e BOT", conteggio: titoli.length },
               { valore: "variabili", nome: "Tasso variabile (CCTeu)", conteggio: variabili.length },
               { valore: "indicizzati", nome: "Indicizzati all'inflazione", conteggio: indicizzati.length },
+              // Solo se il catalogo ne ha: una scheda sempre vuota non direbbe niente.
+              ...(righe.cedoleUniche.length > 0
+                ? [
+                    {
+                      valore: "cedoleUniche" as const,
+                      nome: "Cedola unica (BTP Valore Insieme)",
+                      conteggio: cedoleUniche.length,
+                    },
+                  ]
+                : []),
             ]}
           />
           <button
@@ -1126,54 +1250,7 @@ export function Mercato({
                         <CellaScadenza data={t.dataScadenza} anni={t.rendimentoNominale?.anni ?? null} />
                         <CellaCedola titolo={t} nominale={nominale} oggi={oggi} />
                         <Cella numerica>{formatPrezzo(t.prezzo)}</Cella>
-                        {/* Nessun colore su questa cella: un differenziale negativo
-                            non è un titolo peggiore, è cedola alta pagata in
-                            anticipo, e lo YTM netto lo ha già assorbito. */}
-                        <Cella numerica>
-                          {t.plusRimborso === 0 ? "—" : formatEuroSegno(t.plusRimborso)}
-                          {t.plusRimborso !== 0 &&
-                            (!t.plusCompensabile ? (
-                              <Sotto>fuori dallo zainetto</Sotto>
-                            ) : (
-                              t.plusRimborso < 0 && <Sotto>minus: alimenta lo zainetto</Sotto>
-                            ))}
-                        </Cella>
-                        <Cella numerica evidenza>
-                          <span className="text-[0.9375rem] font-semibold">
-                            {t.ytmNettoPct == null ? "—" : formatPct(t.ytmNettoPct)}
-                          </span>
-                          {t.ytmLordoPct != null && (
-                            <Sotto className="whitespace-nowrap">lordo {formatPct(t.ytmLordoPct)}</Sotto>
-                          )}
-                          {t.ytmLordoPct != null &&
-                            t.ytmNettoSenzaCgPct != null &&
-                            t.ytmNettoSenzaCgPct !== t.ytmNettoPct && (
-                              <Sotto className="whitespace-nowrap">
-                                <Termine chiave="ytmNettoSenzaCg">senza CG</Termine>{" "}
-                                {formatPct(t.ytmNettoSenzaCgPct)}
-                              </Sotto>
-                            )}
-                        </Cella>
-                        <Cella numerica>
-                          {t.rendimentoNominale == null ? (
-                            "—"
-                          ) : (
-                            <>
-                              {formatEuro(t.rendimentoNominale.incassi)}
-                              <span className="block text-xs font-medium text-[var(--delta-buono)]">
-                                {formatEuroSegno(t.rendimentoNominale.guadagno)}
-                              </span>
-                              {/* Sotto l'anno l'annualizzazione di un guadagno di
-                                  pochi giorni sarebbe fuorviante: solo il totale. */}
-                              {t.rendimentoNominale.anni >= 1 && (
-                                <Sotto>{formatEuroSegno(t.rendimentoNominale.annuo)}/anno</Sotto>
-                              )}
-                            </>
-                          )}
-                        </Cella>
-                        <Cella numerica>
-                          {t.durationModificata == null ? "—" : formatPrezzo(t.durationModificata)}
-                        </Cella>
+                        <CelleConti titolo={t} />
                         <CellaScambi titolo={t} />
                       </Riga>
                       {aperta?.isin === t.isin && (
@@ -1254,6 +1331,78 @@ export function Mercato({
                   <CellaScambi titolo={t} />
                 </Riga>
               ))}
+            </Tabella>
+          </div>
+        )}
+
+        {scheda === "cedoleUniche" && (
+          <div role="tabpanel" aria-label="Cedola unica (BTP Valore Insieme)">
+            <Introduzione>
+              Una cedola sola, pagata a scadenza insieme al capitale. Intanto matura giorno per giorno
+              nel rateo, contato in 30E/360: chi compra lo paga a chi vende, e l'imposta del 12,5% su
+              quella parte gliela rimborsano subito. Il rendimento si calcola quando Borsa Italiana
+              pubblica la cedola definitiva: durante il collocamento c'è solo il minimo garantito, che
+              alla chiusura può solo salire.
+            </Introduzione>
+            <Tabella
+              colonne={colonneCedolaUnica(nominale)}
+              vuoto={cedoleUniche.length === 0 ? "Nessun titolo con questi filtri." : undefined}
+            >
+              {cedoleUniche.map((r) => {
+                const conti = r.metriche;
+                if (conti == null) {
+                  return (
+                    <Riga key={r.isin}>
+                      <CellaTitolo titolo={r} conNota />
+                      <CellaScadenza data={r.dataScadenza} anni={r.anniResidui} />
+                      <CellaCedolaUnica titolo={r} nominale={nominale} />
+                      <Cella numerica>{formatPrezzo(r.prezzo)}</Cella>
+                      <Cella numerica>—</Cella>
+                      <Cella evidenza className="text-xs text-[var(--inchiostro-muto)]">
+                        {r.motivoNonCalcolabile}
+                      </Cella>
+                      <Cella numerica>—</Cella>
+                      <Cella numerica>—</Cella>
+                      <CellaScambi titolo={r} />
+                    </Riga>
+                  );
+                }
+                const espansa = aperta?.isin === r.isin;
+                return (
+                  <Fragment key={r.isin}>
+                    <Riga
+                      onClick={() => cambiaAperta(r.isin)}
+                      espansa={espansa}
+                      etichetta={`${espansa ? "Chiudi" : "Apri"} le simulazioni di ${r.nome}`}
+                    >
+                      <CellaTitolo titolo={conti} aperta={espansa} />
+                      <CellaScadenza data={r.dataScadenza} anni={conti.rendimentoNominale?.anni ?? null} />
+                      <CellaCedolaUnica titolo={r} nominale={nominale} />
+                      <Cella numerica>{formatPrezzo(r.prezzo)}</Cella>
+                      <CelleConti titolo={conti} />
+                      <CellaScambi titolo={r} />
+                    </Riga>
+                    {espansa && aperta && (
+                      <tr className="border-b border-[var(--bordo)]">
+                        <td
+                          colSpan={colonneFlussi.length}
+                          className="border-l-2 border-[var(--accento-pieno)] bg-[var(--superficie-2)] p-0!"
+                        >
+                          <Dettaglio
+                            titolo={conti}
+                            vista={aperta.vista}
+                            onVista={(vista) => setAperta({ isin: r.isin, vista })}
+                            onChiudi={() => setAperta(null)}
+                            oggi={oggi}
+                            condizioni={condizioni}
+                            contesto={contesto}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </Tabella>
           </div>
         )}

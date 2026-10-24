@@ -1,6 +1,7 @@
 import { anniTraActAct } from "../date";
 import { rateoMaturato } from "./cedole";
 import {
+  cedolare,
   esborsoNetto,
   flussiLordi,
   flussiNetti,
@@ -89,14 +90,7 @@ export function sensibilitaTassi(
   const flussi = flussiLordi(p);
   const y = tir(flussi, controvaloreTelQuel(p), p.dataRiferimento);
   if (y == null) return null;
-  const rateo = rateoMaturato({
-    quantita: p.quantita,
-    cedolaAnnua: p.cedolaAnnua,
-    frequenzaCedola: p.frequenzaCedola,
-    dataScadenza: p.dataScadenza,
-    riferimento: p.dataRiferimento,
-    gradini: p.gradiniCedola,
-  });
+  const rateo = rateoMaturato({ ...cedolare(p), riferimento: p.dataRiferimento });
 
   return shocks.map((shock) => {
     const tasso = y + shock / 100;

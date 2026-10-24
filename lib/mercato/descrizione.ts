@@ -135,6 +135,13 @@ export function descriviTitolo(t: {
         toccaZainetto: true,
       };
     }
+    case "cedolaUnica":
+      return {
+        famiglia: "Cedola unica",
+        termine: "cedolaUnica",
+        nota: "Una cedola sola, pagata a scadenza insieme al capitale: intanto matura nel rateo, che chi compra paga e chi vende incassa, tassato al 12,5%.",
+        toccaZainetto: true,
+      };
     case "italia":
       return {
         famiglia: "BTP Italia",

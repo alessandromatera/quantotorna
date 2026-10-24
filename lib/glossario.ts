@@ -104,6 +104,11 @@ export const GLOSSARIO: Record<string, VoceGlossario> = {
     testo:
       "BTP pensati per i risparmiatori, con cedole fissate all'emissione ma crescenti nel tempo: per esempio 2,60% i primi tre anni, poi 3,10%, poi 4%. Il rendimento a scadenza le conta tutte, gradino per gradino, quindi non va letto sulla cedola di oggi. Il premio fedeltà, e sul BTP Più il rimborso anticipato, spettano solo a chi ha sottoscritto all'emissione: chi compra sul mercato non li riceve, e il rendimento qui non li include.",
   },
+  cedolaUnica: {
+    titolo: "Cedola unica (BTP Valore Insieme)",
+    testo:
+      "BTP che paga una cedola sola, alla scadenza, insieme al capitale: il BTP Valore Insieme di ottobre 2026 la paga dopo cinque anni, in percentuale del nominale. Nel frattempo la cedola matura giorno per giorno nel rateo, contato in 30E/360: chi compra sul mercato lo paga a chi vende, e l'imposta del 12,5% su quella parte gliela rimborsano subito. Il rendimento si calcola solo quando Borsa Italiana pubblica la cedola definitiva: durante il collocamento c'è solo il minimo garantito.",
+  },
   rating: {
     titolo: "Rating dell'emittente",
     testo:
