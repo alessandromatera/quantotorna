@@ -1,9 +1,52 @@
 "use client";
 
-import type { PaginaTabella } from "@/lib/mercato/pagine";
+import { RIGHE_PER_PAGINA, type Divisione, type PaginaTabella } from "@/lib/mercato/pagine";
 
 function nome(p: PaginaTabella<unknown>): string {
   return p.anni.length > 0 ? `Scadenza ${p.etichetta}` : `Righe ${p.etichetta}`;
+}
+
+const DIVISIONI: { valore: Divisione; nome: string; titolo: string }[] = [
+  { valore: "anni", nome: "Per anno", titolo: "Una pagina per anno di scadenza" },
+  {
+    valore: "righe",
+    nome: `${RIGHE_PER_PAGINA} per pagina`,
+    titolo: `Pagine da ${RIGHE_PER_PAGINA} titoli, nell'ordine scelto`,
+  },
+  { valore: "elenco", nome: "Elenco intero", titolo: "Tutti i titoli di seguito, da scorrere" },
+];
+
+/** Accanto all'introduzione: come dividere la tabella, o lasciarla tutta di seguito. */
+export function SceltaDivisione({
+  divisione,
+  onScegli,
+}: {
+  divisione: Divisione;
+  onScegli: (divisione: Divisione) => void;
+}) {
+  return (
+    <div role="group" aria-label="Come mostrare i titoli" className="flex flex-wrap items-center gap-1.5">
+      {/* Sotto i 640 px non c'è posto per tutti e quattro su una riga: i
+          bottoni si spiegano da soli, e il gruppo ha il suo nome. */}
+      <span className="mr-0.5 hidden text-sm text-[var(--inchiostro-muto)] sm:inline">Mostra</span>
+      {DIVISIONI.map((d) => (
+        <button
+          key={d.valore}
+          type="button"
+          title={d.titolo}
+          aria-pressed={divisione === d.valore}
+          onClick={() => onScegli(d.valore)}
+          className={`whitespace-nowrap rounded-md border px-2.5 py-1 text-xs transition-colors ${
+            divisione === d.valore
+              ? "border-[var(--accento-pieno)] bg-[var(--accento-pieno)] text-white"
+              : "border-[var(--bordo)] bg-[var(--superficie)] text-[var(--inchiostro-2)] hover:border-[var(--bordo-forte)]"
+          }`}
+        >
+          {d.nome}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 /**

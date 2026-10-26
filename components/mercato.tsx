@@ -4,7 +4,7 @@ import { PannelloCondizioni, riassuntoCondizioni, useCondizioni } from "@/compon
 import { CurvaRendimenti, type PuntoCurva } from "@/components/grafici";
 import { LinkStrumento } from "@/components/link-strumento";
 import { MenuFiltro, NotaMenu, OpzioneFiltro } from "@/components/menu-filtro";
-import { AvantiIndietro, ElencoPagine } from "@/components/pagine-tabella";
+import { AvantiIndietro, ElencoPagine, SceltaDivisione } from "@/components/pagine-tabella";
 import { SimulaAcquisto } from "@/components/simula-acquisto";
 import { Termine } from "@/components/termine";
 import {
@@ -74,10 +74,12 @@ import {
   type Ordinamento,
 } from "@/lib/mercato/ordinamento";
 import {
+  RIGHE_PER_PAGINA,
   indicePagina,
   pagineDiRighe,
   paginePerAnno,
   sceltaDi,
+  type Divisione,
   type SceltaPagina,
 } from "@/lib/mercato/pagine";
 import { leggiPareggio } from "@/lib/mercato/pareggio";
@@ -677,8 +679,11 @@ export function Mercato({
   const [condizioniAperte, setCondizioniAperte] = useState(false);
   const [scheda, setScheda] = useState<Scheda>("fissi");
   const [ordinamento, setOrdinamento] = useState<Ordinamento>(ORDINAMENTO_PREDEFINITO);
-  /** Un gruppo per anno di scadenza: la domanda della scaletta, il migliore di ogni anno. */
-  const [perAnno, setPerAnno] = useState(true);
+  /**
+   * Per anno di scadenza: la domanda della scaletta, il migliore di ogni
+   * anno. Oppure pagine di righe, o l'elenco intero da scorrere.
+   */
+  const [divisione, setDivisione] = useState<Divisione>("anni");
   const [filtri, setFiltri] = useState<Filtri>(FILTRI_VUOTI);
   /** Il titolo col dettaglio aperto (clic sulla riga): uno per volta. */
   const [aperta, setAperta] = useState<{ isin: string; vista: Vista } | null>(null);
@@ -800,12 +805,16 @@ export function Mercato({
   );
   /**
    * La tabella a pagine (vedi lib/mercato/pagine.ts): un anno di scadenza per
-   * pagina, o cinquanta righe senza anni. Le pagine si rifanno dai titoli
+   * pagina, cinquanta righe senza anni, o tutte in una pagina sola, che non ha
+   * barra degli anni né avanti e indietro. Le pagine si rifanno dai titoli
    * filtrati: un filtro che lascia pochi titoli in un anno lo accorpa ai vicini.
    */
   const pagine = useMemo(
-    () => (perAnno ? paginePerAnno(raggruppaPerAnno(titoli, ordinamento)) : pagineDiRighe(titoli)),
-    [titoli, ordinamento, perAnno],
+    () =>
+      divisione === "anni"
+        ? paginePerAnno(raggruppaPerAnno(titoli, ordinamento))
+        : pagineDiRighe(titoli, divisione === "righe" ? RIGHE_PER_PAGINA : Infinity),
+    [titoli, ordinamento, divisione],
   );
   const [sceltaPagina, setSceltaPagina] = useState<SceltaPagina | null>(null);
   const paginaCorrente = indicePagina(pagine, sceltaPagina, titoli);
@@ -1140,17 +1149,7 @@ export function Mercato({
         {scheda === "fissi" && (
           <div role="tabpanel" aria-label="Tasso fisso, step-up, strip e BOT">
             <Introduzione
-              azioni={
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={perAnno}
-                    onChange={(e) => setPerAnno(e.target.checked)}
-                    className="h-4 w-4 accent-[var(--accento-pieno)]"
-                  />
-                  Raggruppa per anno di scadenza
-                </label>
-              }
+              azioni={<SceltaDivisione divisione={divisione} onScegli={setDivisione} />}
             >
               Titoli i cui incassi sono certi già oggi, con le metriche su{" "}
               {formatNumero(nominale)} € nominali. Un clic sulla riga apre il conto d'acquisto col
@@ -1160,7 +1159,7 @@ export function Mercato({
                   parole, perché sul telefono le intestazioni scorrono fuori
                   dallo schermo. */}
               <span className="text-[var(--inchiostro-muto)]">
-                Ordine{perAnno ? " dentro ogni anno" : ""}: {descriviOrdinamento(ordinamento)}; a
+                Ordine{divisione === "anni" ? " dentro ogni anno" : ""}: {descriviOrdinamento(ordinamento)}; a
                 pari merito {descriviOrdinamento(spareggio(ordinamento.chiave))}.
                 {metriche.nascostiYtmNegativo > 0 && (
                   <>

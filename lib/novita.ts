@@ -15,6 +15,12 @@ export interface Novita {
 
 export const NOVITA: Novita[] = [
   {
+    data: "2026-10-26",
+    voci: [
+      "La tabella dei tassi fissi si può scorrere tutta di seguito, senza pagine: «Elenco intero», accanto a «Per anno» e «50 per pagina».",
+    ],
+  },
+  {
     data: "2026-10-24",
     voci: [
       "CCTeu: cedola e rateo si contano come li conta il Tesoro, sui giorni effettivi del semestre diviso 360. Le cedole non sono più tutte uguali e il rendimento a scadenza sale di circa 5 punti base.",

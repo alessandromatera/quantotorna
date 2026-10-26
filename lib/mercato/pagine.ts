@@ -9,10 +9,14 @@ import type { GruppoAnno } from "./ordinamento";
  * oltre il 2040, si accorpano ai successivi finché la pagina ne ha almeno
  * `MINIMO_PER_PAGINA`: quaranta bottoni, metà con due titoli, non si
  * sfogliano. Senza anni, pagine di `RIGHE_PER_PAGINA` righe nell'ordine
- * scelto.
+ * scelto. Chi preferisce scorrere che sfogliare ha anche l'elenco intero:
+ * una pagina sola con tutte le righe.
  */
 export const MINIMO_PER_PAGINA = 10;
 export const RIGHE_PER_PAGINA = 50;
+
+/** Come si divide la tabella: per anno, a pagine di righe, o per niente. */
+export type Divisione = "anni" | "righe" | "elenco";
 
 export interface PaginaTabella<T> {
   /** «2027», «2043–2044», o «1–50» senza anni. */
@@ -71,7 +75,10 @@ export function paginePerAnno<T>(gruppi: GruppoAnno<T>[], minimo = MINIMO_PER_PA
   return pagine;
 }
 
-/** Senza anni: pezzi di `perPagina` righe, nell'ordine in cui arrivano. */
+/**
+ * Senza anni: pezzi di `perPagina` righe, nell'ordine in cui arrivano. Con
+ * `Infinity` è l'elenco intero, in una pagina.
+ */
 export function pagineDiRighe<T>(titoli: T[], perPagina = RIGHE_PER_PAGINA): PaginaTabella<T>[] {
   const pagine: PaginaTabella<T>[] = [];
   for (let i = 0; i < titoli.length; i += perPagina) {

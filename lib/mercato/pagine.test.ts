@@ -58,6 +58,14 @@ describe("pagineDiRighe", () => {
     ]);
     expect(pagine[2].gruppi).toEqual([{ anno: null, titoli: righe.slice(100) }]);
   });
+
+  it("l'elenco intero è una pagina sola, e nessuna se non ci sono righe", () => {
+    const righe = Array.from({ length: 620 }, (_, i) => i);
+    const pagine = pagineDiRighe(righe, Infinity);
+    expect(pagine.map((p) => [p.etichetta, p.righe])).toEqual([["1–620", 620]]);
+    expect(pagine[0].gruppi).toEqual([{ anno: null, titoli: righe }]);
+    expect(pagineDiRighe([], Infinity)).toEqual([]);
+  });
 });
 
 describe("indicePagina", () => {

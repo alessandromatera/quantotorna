@@ -4,6 +4,10 @@ Cosa è cambiato in quantotorna, dal più recente. Lo stesso elenco sta sul
 sito, nella pagina Informazioni. Questo file si genera da `lib/novita.ts`
 con `npm run changelog`: si modifica lì, e un test controlla che coincidano.
 
+## 26/10/2026
+
+- La tabella dei tassi fissi si può scorrere tutta di seguito, senza pagine: «Elenco intero», accanto a «Per anno» e «50 per pagina».
+
 ## 24/10/2026
 
 - CCTeu: cedola e rateo si contano come li conta il Tesoro, sui giorni effettivi del semestre diviso 360. Le cedole non sono più tutte uguali e il rendimento a scadenza sale di circa 5 punti base.
