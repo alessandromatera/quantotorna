@@ -45,7 +45,8 @@ di comprare va controllato il conto del proprio intermediario.
 ## Come è fatto
 
 Sito statico (Next.js in esportazione statica) su GitHub Pages, rigenerato
-ogni sera da GitHub Actions (`.github/workflows/sito.yml`): i conti della
+ogni sera dei giorni feriali da GitHub Actions (`.github/workflows/sito.yml`),
+che un cron esterno lancia dopo la chiusura di Borsa: i conti della
 tabella si fanno alla compilazione, su 10.000 nominali e senza commissioni;
 quelli che dipendono da chi guarda — nominale e commissioni per la tabella,
 in più prezzo e zainetto per le simulazioni — nel suo browser, con le
