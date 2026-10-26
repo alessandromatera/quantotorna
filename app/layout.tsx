@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import Link from "next/link";
 import Script from "next/script";
 import { Navigazione } from "@/components/navigazione";
-import { AUTORE, OPEN_GRAPH_SITO, URL_CODICE, URL_SITO } from "@/lib/sito";
+import { AUTORE, OPEN_GRAPH_SITO, URL_AUTORE, URL_CODICE, URL_SITO } from "@/lib/sito";
 import "./globals.css";
 
 /*
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   title: { default: TITOLO, template: "%s — quantotorna" },
   description: DESCRIZIONE,
   applicationName: "quantotorna",
-  authors: [{ name: AUTORE }],
+  authors: [{ name: AUTORE, url: URL_AUTORE }],
   openGraph: { ...OPEN_GRAPH_SITO, url: "/", title: TITOLO, description: DESCRIZIONE },
   twitter: { card: "summary_large_image", images: OPEN_GRAPH_SITO.images },
 };
@@ -130,7 +130,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <a href={URL_CODICE} className="text-[var(--accento)] underline underline-offset-2">
                 Codice aperto
               </a>{" "}
-              con licenza AGPL-3.0, di {AUTORE}.
+              con licenza AGPL-3.0, di{" "}
+              <a href={URL_AUTORE} rel="author" className="text-[var(--accento)] underline underline-offset-2">
+                {AUTORE}
+              </a>
+              .
             </p>
           </div>
         </footer>

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Testata } from "@/components/ui";
 import { formatDataIT } from "@/lib/date";
 import { NOVITA } from "@/lib/novita";
-import { AUTORE, OPEN_GRAPH_SITO, URL_CODICE } from "@/lib/sito";
+import { AUTORE, OPEN_GRAPH_SITO, URL_AUTORE, URL_CODICE } from "@/lib/sito";
 
 const DESCRIZIONE =
   "Cos'è quantotorna, chi lo fa, da dove vengono i dati, le avvertenze (non è consulenza finanziaria) e cosa è cambiato.";
@@ -55,7 +55,11 @@ export default function Informazioni() {
 
           <Sezione id="autore" titolo="Chi lo fa">
             <p>
-              Il sito è di {AUTORE}, senza pubblicità. Il{" "}
+              Il sito è di{" "}
+              <a href={URL_AUTORE} rel="author" className={link}>
+                {AUTORE}
+              </a>
+              , senza pubblicità. Il{" "}
               <a href={URL_CODICE} className={link}>
                 codice
               </a>{" "}

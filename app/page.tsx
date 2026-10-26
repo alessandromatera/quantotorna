@@ -4,7 +4,7 @@ import { Dati, Dato, Testata } from "@/components/ui";
 import { caricaCatalogo } from "@/lib/catalogo/file";
 import { metricheCatalogo, titoliInElenco } from "@/lib/catalogo/metriche";
 import { formatDataIT, formatMeseIT, formatPct } from "@/lib/client/format";
-import { AUTORE, URL_SITO } from "@/lib/sito";
+import { AUTORE, URL_AUTORE, URL_SITO } from "@/lib/sito";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -44,7 +44,7 @@ export default function Pagina() {
         isAccessibleForFree: true,
         dateModified: catalogo.data,
         temporalCoverage: catalogo.data,
-        creator: { "@type": "Person", name: AUTORE },
+        creator: { "@type": "Person", name: AUTORE, url: URL_AUTORE },
         includedInDataCatalog: { "@id": `${URL_SITO}/#sito` },
         distribution: [
           {

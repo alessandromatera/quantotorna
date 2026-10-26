@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { IndirizzoProtetto } from "@/components/indirizzo-protetto";
 import { Testata } from "@/components/ui";
-import { AUTORE, OPEN_GRAPH_SITO } from "@/lib/sito";
+import { AUTORE, OPEN_GRAPH_SITO, URL_AUTORE } from "@/lib/sito";
 
 const DESCRIZIONE = "Quali dati tratta quantotorna, perché e per quanto tempo, e come esercitare i tuoi diritti.";
 
@@ -35,7 +35,11 @@ export default function Privacy() {
         <article className="max-w-3xl space-y-10 text-[0.9375rem] leading-relaxed text-[var(--inchiostro-2)] [&_strong]:text-[var(--inchiostro)]">
           <Sezione titolo="Chi tratta i dati">
             <p>
-              Il sito è di {AUTORE}, che è il titolare del trattamento. Per qualunque domanda sui tuoi
+              Il sito è di{" "}
+              <a href={URL_AUTORE} rel="author" className={link}>
+                {AUTORE}
+              </a>
+              , che è il titolare del trattamento. Per qualunque domanda sui tuoi
               dati scrivi a{" "}
               <IndirizzoProtetto codificato={INDIRIZZO} aParole="me, chiocciola, alessandromatera punto com" />.
             </p>

@@ -4,6 +4,9 @@
  */
 export const AUTORE = "Alessandro Matera";
 
+/** Il sito dell'autore: ci rimanda il nome, dovunque compaia. */
+export const URL_AUTORE = "https://alessandromatera.com/";
+
 /** La repo pubblica del codice. */
 export const URL_CODICE = "https://github.com/alessandromatera/quantotorna";
 

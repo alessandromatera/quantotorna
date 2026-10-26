@@ -101,4 +101,4 @@ codice e nella pagina «Metodologia».
 [GNU AGPL-3.0](LICENSE). Chi usa questo codice per offrire un servizio deve
 rendere disponibili anche le proprie modifiche.
 
-Autore: Alessandro Matera.
+Autore: [Alessandro Matera](https://alessandromatera.com/).
