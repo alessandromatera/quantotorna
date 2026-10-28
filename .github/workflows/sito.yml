@@ -14,6 +14,12 @@
 #   chiesto con l'API parte subito. Il cron guarda prima il catalogo
 #   online: se è di oggi e generato dalle 16:45 UTC non chiede niente, e se
 #   un giro fallisce lo richiede più tardi.
+# - Titoli lasciati fuori per un motivo che ieri non c'era (un titolo nuovo
+#   che il motore non sa leggere, una scheda scritta in un altro modo): lo
+#   scaricamento li scrive nel riepilogo del giro, e dopo la pubblicazione il
+#   job `avvisi` fallisce apposta, perché GitHub lo segnali all'autore per
+#   email. Il sito è già aggiornato, e il cron guarda solo la data del
+#   catalogo: non rilancia niente.
 # - Push su main: test, poi ricompila col catalogo già pubblicato, senza
 #   riscaricare niente.
 # - Primo giro, quando il sito non c'è ancora: a mano, con «da zero». Le
@@ -57,6 +63,9 @@ concurrency:
 jobs:
   compila:
     runs-on: ubuntu-latest
+    outputs:
+      # Vuoto se non si è scaricato niente (push) o senza il catalogo di ieri.
+      scartate_nuove: ${{ steps.dati.outputs.scartate_nuove }}
     env:
       # Le date dei conti sono quelle italiane (`giornoDeiPrezzi`).
       TZ: Europe/Rome
@@ -100,6 +109,7 @@ jobs:
           rm -rf pacchetto
 
       - name: Dati di oggi
+        id: dati
         if: github.event_name != 'push'
         env:
           DA_ZERO: ${{ inputs.da_zero }}
@@ -125,3 +135,17 @@ jobs:
     steps:
       - id: pubblicazione
         uses: actions/deploy-pages@v5
+
+  # Dopo la pubblicazione, mai prima: un avviso non deve fermare il rinnovo.
+  avvisi:
+    needs: [compila, pubblica]
+    if: fromJSON(needs.compila.outputs.scartate_nuove || '0') > 0
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Titoli lasciati fuori per un motivo nuovo
+        env:
+          QUANTE: ${{ needs.compila.outputs.scartate_nuove }}
+        run: |
+          echo "::error::$QUANTE titoli lasciati fuori per un motivo che ieri non c'era: l'elenco è nel riepilogo del giro. Il sito è aggiornato."
+          exit 1

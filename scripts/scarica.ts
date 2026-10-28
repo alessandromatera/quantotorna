@@ -14,11 +14,16 @@
  * Se i listini non si leggono esce con 1 e non tocca il file: il sito resta
  * quello di ieri. Il file nuovo si scrive accanto e poi si sostituisce, così
  * un'interruzione a metà non lascia mai un catalogo troncato.
+ *
+ * Le righe lasciate fuori per un motivo che ieri non c'era finiscono nel
+ * riepilogo del giro su GitHub, e il loro numero fra gli output dello step
+ * (`scartate_nuove`): il workflow, dopo aver pubblicato, lo segnala.
  */
-import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { PERCORSO_CATALOGO, caricaCatalogo } from "../lib/catalogo/file";
 import { leggiCatalogo } from "../lib/catalogo/formato";
+import { motivoSuUnaRiga, riepilogoScartateNuove, scartateNuove } from "../lib/catalogo/scartate";
 import { aggiornaCatalogo, type RapportoScaricamento } from "../lib/catalogo/scaricamento";
 import { giornoDeiPrezzi, oggiISO } from "../lib/date";
 import { dataGodimentoMot, scaricaListaBtp, schedaStepUpMot } from "../lib/prezzi/borsaitaliana";
@@ -74,6 +79,29 @@ async function main() {
     console.log(
       `ATTENZIONE: ${f.fonte} non ha risposto (${f.errore}); ultima lettura riuscita: ${f.ultimaLettura ?? "non nota"}.`,
     );
+  }
+  if (precedente) {
+    segnalaScartateNuove(scartateNuove(precedente.rapporto.scartate, catalogo.rapporto.scartate));
+  } else {
+    console.log("Senza il catalogo di ieri gli scartati non si confrontano.");
+  }
+}
+
+/**
+ * Le scartate nuove nel log e, su GitHub Actions, nel riepilogo del giro e
+ * fra gli output dello step. Fuori da GitHub le due variabili non ci sono.
+ * Il catalogo è già scritto: un errore qui si dice nel log ma non ferma il
+ * giro, perché il sito si aggiorna comunque.
+ */
+function segnalaScartateNuove(nuove: { isin: string; motivo: string }[]) {
+  for (const s of nuove) console.log(`NUOVO SCARTATO ${s.isin}: ${motivoSuUnaRiga(s.motivo)}`);
+  try {
+    const riepilogo = process.env.GITHUB_STEP_SUMMARY;
+    if (riepilogo && nuove.length > 0) appendFileSync(riepilogo, riepilogoScartateNuove(nuove));
+    const output = process.env.GITHUB_OUTPUT;
+    if (output) appendFileSync(output, `scartate_nuove=${nuove.length}\n`);
+  } catch (e) {
+    console.log(`ATTENZIONE: scartati nuovi non segnalati a GitHub (${e instanceof Error ? e.message : String(e)}).`);
   }
 }
 
