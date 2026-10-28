@@ -73,24 +73,25 @@ describe("llmsTxt", () => {
 });
 
 describe("la cedola unica in Markdown", () => {
-  const conInsieme = metricheCatalogo({
-    ...catalogo,
-    titoli: [
-      ...catalogo.titoli,
-      titolo({
-        isin: "IT0000000037",
-        nome: "Btp Valore Insieme Inventato",
-        tipo: "cedolaUnica",
-        cedolaAnnua: 0,
-        dataScadenza: "2031-10-27",
-        prezzo: 100,
-        cedolaUnica: { percentuale: 22.25, definitiva: false, godimento: "2026-10-27" },
-      }),
-    ],
-  });
+  const conInsieme = (definitiva: boolean) =>
+    metricheCatalogo({
+      ...catalogo,
+      titoli: [
+        ...catalogo.titoli,
+        titolo({
+          isin: "IT0000000037",
+          nome: "Btp Valore Insieme Inventato",
+          tipo: "cedolaUnica",
+          cedolaAnnua: 0,
+          dataScadenza: "2031-10-27",
+          prezzo: 100,
+          cedolaUnica: { percentuale: definitiva ? 22.7 : 22.25, definitiva, godimento: "2026-10-27" },
+        }),
+      ],
+    });
 
-  it("ha la sua tabella, col minimo dichiarato e il motivo al posto del rendimento", () => {
-    const testo = rendimentiInMarkdown(conInsieme);
+  it("col minimo ha la sua tabella, col minimo dichiarato e il motivo al posto del rendimento", () => {
+    const testo = rendimentiInMarkdown(conInsieme(false));
     expect(testo).toContain("## Cedola unica, BTP Valore Insieme (1 titoli)");
     const riga = testo.split("\n").find((r) => r.includes("IT0000000037"))!;
     expect(riga).toContain("minimo 22,25%");
@@ -99,7 +100,17 @@ describe("la cedola unica in Markdown", () => {
     expect(rendimentiInMarkdown(m)).not.toContain("Cedola unica");
   });
 
+  it("con la cedola definitiva sta fra i tassi fissi, con la cedola unica nella colonna della cedola", () => {
+    const testo = rendimentiInMarkdown(conInsieme(true));
+    expect(testo).not.toContain("## Cedola unica");
+    expect(testo).toContain("## Tasso fisso, step-up, strip e BOT (2 titoli)");
+    const riga = testo.split("\n").find((r) => r.includes("IT0000000037"))!;
+    expect(riga).toContain("22,70% a scadenza");
+    // 2.270 € lordi, 1.986,25 € netti sui 10.000 nominali comprati a 100.
+    expect(riga).toContain("1.986,25 €");
+  });
+
   it("entra nel conto dei titoli", () => {
-    expect(llmsTxt(conInsieme)).toContain("3 titoli, prezzi di chiusura");
+    expect(llmsTxt(conInsieme(false))).toContain("3 titoli, prezzi di chiusura");
   });
 });

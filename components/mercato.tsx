@@ -344,7 +344,8 @@ const CADENZA: Record<number, string> = {
  * Cedola annua e quanto vale ogni stacco sul nominale della tabella. Sugli
  * step-up la cedola è quella di oggi e sotto ci sono i gradini che mancano:
  * il rendimento li conta già, e chi legge solo la cedola di oggi capirebbe
- * male.
+ * male. La cedola unica si scrive com'è, una percentuale pagata a scadenza,
+ * e sotto la media annua su cui la colonna la ordina.
  */
 function CellaCedola({
   titolo: t,
@@ -355,6 +356,16 @@ function CellaCedola({
   nominale: number;
   oggi: string;
 }) {
+  if (t.cedolaUnica) {
+    const c = t.cedolaUnica;
+    return (
+      <Cella numerica>
+        {formatPct(c.percentuale)}
+        <Sotto>{`a scadenza · ${formatEuro(Math.round(nominale * c.percentuale))}`}</Sotto>
+        <Sotto>{`in media ${formatPct(t.cedolaAnnua)} l'anno`}</Sotto>
+      </Cella>
+    );
+  }
   const prossimi = (t.gradiniCedola ?? []).filter((g) => g.dal > oggi);
   return (
     <Cella numerica>
@@ -376,27 +387,21 @@ function CellaCedola({
 }
 
 /**
- * La cedola unica in percentuale del nominale e in euro sul nominale della
- * tabella. Col minimo del collocamento si scrive che è il minimo.
+ * La cedola unica nella sua scheda, dove sta solo durante il collocamento:
+ * è il minimo, e si scrive che è il minimo.
  */
-function CellaCedolaUnica({ titolo: t, nominale }: { titolo: RigaCedolaUnica; nominale: number }) {
-  const c = t.cedolaUnica;
+function CellaCedolaMinima({ titolo: t }: { titolo: RigaCedolaUnica }) {
   return (
     <Cella numerica>
-      {c.definitiva ? formatPct(c.percentuale) : `minimo ${formatPct(c.percentuale)}`}
-      <Sotto>
-        {c.definitiva
-          ? `una sola, il ${formatDataIT(t.dataScadenza)} · ${formatEuro(Math.round(nominale * c.percentuale))}`
-          : "definitiva non ancora pubblicata"}
-      </Sotto>
+      {`minimo ${formatPct(t.cedolaUnica.percentuale)}`}
+      <Sotto>definitiva non ancora pubblicata</Sotto>
     </Cella>
   );
 }
 
 /**
  * Le celle dei conti di un titolo a flussi noti, dalla plusvalenza a
- * rimborso alla duration: le stesse nella tabella dei fissi e in quella
- * della cedola unica.
+ * rimborso alla duration.
  */
 function CelleConti({ titolo: t }: { titolo: RigaFlussiNoti }) {
   return (
@@ -732,11 +737,12 @@ export function Mercato({
         durationModificata: null,
         scambiMediana: r.scambi?.mediana ?? null,
       })),
+      // Solo col minimo del collocamento: niente rendimento né duration.
       cedoleUniche: righe.cedoleUniche.map((r) => ({
         ...r,
         toccaZainetto: descriviTitolo(r).toccaZainetto,
-        rendimentoPct: r.ytmNettoPct,
-        durationModificata: r.metriche?.durationModificata ?? null,
+        rendimentoPct: null,
+        durationModificata: null,
         scambiMediana: r.scambi?.mediana ?? null,
       })),
     }),
@@ -1337,71 +1343,30 @@ export function Mercato({
         {scheda === "cedoleUniche" && (
           <div role="tabpanel" aria-label="Cedola unica (BTP Valore Insieme)">
             <Introduzione>
-              Una cedola sola, pagata a scadenza insieme al capitale. Intanto matura giorno per giorno
-              nel rateo, contato in 30E/360: chi compra lo paga a chi vende, e l'imposta del 12,5% su
-              quella parte gliela rimborsano subito. Il rendimento si calcola quando Borsa Italiana
-              pubblica la cedola definitiva: durante il collocamento c'è solo il minimo garantito, che
-              alla chiusura può solo salire.
+              Una cedola sola, pagata a scadenza insieme al capitale, durante il collocamento: c'è
+              solo il minimo garantito, che alla chiusura può solo salire, e il rendimento non si
+              calcola. Quando Borsa Italiana pubblica la cedola definitiva il titolo passa fra i
+              tassi fissi, con rendimento, «Se lo compro» e «Se esco prima».
             </Introduzione>
             <Tabella
               colonne={colonneCedolaUnica(nominale)}
               vuoto={cedoleUniche.length === 0 ? "Nessun titolo con questi filtri." : undefined}
             >
-              {cedoleUniche.map((r) => {
-                const conti = r.metriche;
-                if (conti == null) {
-                  return (
-                    <Riga key={r.isin}>
-                      <CellaTitolo titolo={r} conNota />
-                      <CellaScadenza data={r.dataScadenza} anni={r.anniResidui} />
-                      <CellaCedolaUnica titolo={r} nominale={nominale} />
-                      <Cella numerica>{formatPrezzo(r.prezzo)}</Cella>
-                      <Cella numerica>—</Cella>
-                      <Cella evidenza className="text-xs text-[var(--inchiostro-muto)]">
-                        {r.motivoNonCalcolabile}
-                      </Cella>
-                      <Cella numerica>—</Cella>
-                      <Cella numerica>—</Cella>
-                      <CellaScambi titolo={r} />
-                    </Riga>
-                  );
-                }
-                const espansa = aperta?.isin === r.isin;
-                return (
-                  <Fragment key={r.isin}>
-                    <Riga
-                      onClick={() => cambiaAperta(r.isin)}
-                      espansa={espansa}
-                      etichetta={`${espansa ? "Chiudi" : "Apri"} le simulazioni di ${r.nome}`}
-                    >
-                      <CellaTitolo titolo={conti} aperta={espansa} />
-                      <CellaScadenza data={r.dataScadenza} anni={conti.rendimentoNominale?.anni ?? null} />
-                      <CellaCedolaUnica titolo={r} nominale={nominale} />
-                      <Cella numerica>{formatPrezzo(r.prezzo)}</Cella>
-                      <CelleConti titolo={conti} />
-                      <CellaScambi titolo={r} />
-                    </Riga>
-                    {espansa && aperta && (
-                      <tr className="border-b border-[var(--bordo)]">
-                        <td
-                          colSpan={colonneFlussi.length}
-                          className="border-l-2 border-[var(--accento-pieno)] bg-[var(--superficie-2)] p-0!"
-                        >
-                          <Dettaglio
-                            titolo={conti}
-                            vista={aperta.vista}
-                            onVista={(vista) => setAperta({ isin: r.isin, vista })}
-                            onChiudi={() => setAperta(null)}
-                            oggi={oggi}
-                            condizioni={condizioni}
-                            contesto={contesto}
-                          />
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
+              {cedoleUniche.map((r) => (
+                <Riga key={r.isin}>
+                  <CellaTitolo titolo={r} conNota />
+                  <CellaScadenza data={r.dataScadenza} anni={r.anniResidui} />
+                  <CellaCedolaMinima titolo={r} />
+                  <Cella numerica>{formatPrezzo(r.prezzo)}</Cella>
+                  <Cella numerica>—</Cella>
+                  <Cella evidenza className="text-xs text-[var(--inchiostro-muto)]">
+                    {r.motivoNonCalcolabile}
+                  </Cella>
+                  <Cella numerica>—</Cella>
+                  <Cella numerica>—</Cella>
+                  <CellaScambi titolo={r} />
+                </Riga>
+              ))}
             </Tabella>
           </div>
         )}

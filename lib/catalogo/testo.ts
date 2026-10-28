@@ -63,7 +63,7 @@ export function rendimentiInMarkdown(m: MetricheCatalogo): string {
         t.nome,
         t.isin,
         formatDataIT(t.dataScadenza),
-        formatPct(t.cedolaAnnua),
+        t.cedolaUnica ? `${formatPct(t.cedolaUnica.percentuale)} a scadenza` : formatPct(t.cedolaAnnua),
         formatPrezzoMot(t.prezzo),
         pctONulla(t.ytmNettoPct),
         pctONulla(t.ytmLordoPct),
@@ -114,21 +114,18 @@ export function rendimentiInMarkdown(m: MetricheCatalogo): string {
           `## Cedola unica, BTP Valore Insieme (${m.cedoleUniche.length} titoli)`,
           "",
           "Una cedola sola, in percentuale del nominale, pagata a scadenza insieme al capitale; il " +
-            "rateo matura in 30E/360. Il rendimento si calcola solo con la cedola definitiva.",
+            "rateo matura in 30E/360. Durante il collocamento c'è solo il minimo della cedola e il " +
+            "rendimento non si calcola; con la cedola definitiva il titolo passa fra i tassi fissi.",
           "",
           tabella(
-            ["Titolo", "ISIN", "Scadenza", "Cedola unica", "Prezzo", "YTM netto", "YTM lordo", `Guadagno netto su ${nominale} nominali`],
+            ["Titolo", "ISIN", "Scadenza", "Cedola unica", "Prezzo", "YTM netto"],
             m.cedoleUniche.map((t) => [
               t.nome,
               t.isin,
               formatDataIT(t.dataScadenza),
-              t.cedolaUnica.definitiva
-                ? formatPct(t.cedolaUnica.percentuale)
-                : `minimo ${formatPct(t.cedolaUnica.percentuale)}`,
+              `minimo ${formatPct(t.cedolaUnica.percentuale)}`,
               formatPrezzoMot(t.prezzo),
-              t.metriche ? pctONulla(t.metriche.ytmNettoPct) : `— (${t.motivoNonCalcolabile ?? "non calcolabile"})`,
-              t.metriche ? pctONulla(t.metriche.ytmLordoPct) : "—",
-              t.metriche?.rendimentoNominale ? formatEuro(t.metriche.rendimentoNominale.guadagno) : "—",
+              `— (${t.motivoNonCalcolabile})`,
             ]),
           ),
           "",

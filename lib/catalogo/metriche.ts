@@ -39,7 +39,9 @@ import type { Catalogo, TitoloCatalogo } from "./formato";
  * - `flussiNoti`: tasso fisso, step-up, strip e BOT, i cui incassi sono
  *   certi già oggi. Strip e BOT stanno qui perché il motore li calcola bene;
  *   quello che cambia è la natura del guadagno, segnalata riga per riga da
- *   `plusCompensabile`;
+ *   `plusCompensabile`. Qui anche il BTP Valore Insieme con la cedola
+ *   definitiva: una cedola sola, ma nota, e il confronto che serve è coi
+ *   titoli di scadenza vicina;
  * - `variabili`: CCTeu, con la cedola ricostruita dall'Euribor di oggi e il
  *   rendimento nell'ipotesi dichiarata che resti lì;
  * - `indicizzati`: BTP€i e BTP Italia. Sui BTP€i il MOT quota il prezzo
@@ -47,9 +49,9 @@ import type { Catalogo, TitoloCatalogo } from "./formato";
  *   rendimento reale, affiancato al tasso fisso di scadenza più vicina per
  *   ricavarne l'inflazione di pareggio. Sui BTP Italia non c'è un rendimento
  *   a scadenza da calcolare, e la riga lo dice;
- * - `cedoleUniche`: BTP Valore Insieme, una cedola sola a scadenza. Con la
- *   cedola definitiva ha i conti di un titolo a flussi noti; finché la scheda
- *   di Borsa Italiana dà il minimo del collocamento, nessun rendimento.
+ * - `cedoleUniche`: BTP Valore Insieme durante il collocamento, quando la
+ *   scheda di Borsa Italiana dà solo il minimo della cedola: nessun
+ *   rendimento. Con la cedola definitiva il titolo passa fra i flussi noti.
  *
  * Modulo puro: gira alla compilazione del sito e nei test.
  */
@@ -144,18 +146,12 @@ export interface RigaVariabile extends TitoloValutato {
   motivoNonCalcolabile: string | null;
 }
 
+/** Una riga a cedola unica col minimo del collocamento: niente conti, solo il motivo. */
 export interface RigaCedolaUnica extends TitoloValutato {
   categoria: CategoriaStrumento;
   cedolaUnica: CedolaUnica;
   anniResidui: number;
-  /** È `metriche.ytmNettoPct`, qui per i filtri e lo scarto dei negativi. */
-  ytmNettoPct: number | null;
-  /**
-   * I conti di un titolo a flussi noti, gli stessi della tabella dei fissi,
-   * con la cedola definitiva; null finché è il minimo del collocamento.
-   */
-  metriche: RigaFlussiNoti | null;
-  motivoNonCalcolabile: string | null;
+  motivoNonCalcolabile: string;
 }
 
 export interface RigaIndicizzata extends TitoloValutato {
@@ -194,8 +190,15 @@ export function metricheCatalogo(catalogo: Catalogo): MetricheCatalogo {
     .sort((a, b) => a.dataScadenza.localeCompare(b.dataScadenza) || a.isin.localeCompare(b.isin))
     .map((t) => ({ ...t, emissione: catalogo.emissioni[t.isin] ?? null }));
 
+  // La cedola unica definitiva è un flusso noto come gli altri; col minimo
+  // del collocamento resta a parte, senza conti.
+  const cedolaDefinitiva = (t: TitoloValutato) => t.tipo === "cedolaUnica" && t.cedolaUnica?.definitiva === true;
   const conFlussiNoti = vivi
-    .filter((t) => t.tipo === "fisso" || t.tipo === "stepUp" || t.tipo === "zeroCoupon" || t.tipo === "bot")
+    .filter(
+      (t) =>
+        t.tipo === "fisso" || t.tipo === "stepUp" || t.tipo === "zeroCoupon" || t.tipo === "bot" ||
+        cedolaDefinitiva(t),
+    )
     .map((t) => rigaFlussiNoti(t, oggi));
 
   /**
@@ -225,8 +228,9 @@ export function metricheCatalogo(catalogo: Catalogo): MetricheCatalogo {
     .filter((t) => t.tipo === "indicizzatoEuro" || t.tipo === "italia")
     .map((t) => rigaIndicizzata(t, oggi, riferimenti));
 
-  const conCedolaUnica = vivi.filter((t) => t.tipo === "cedolaUnica").map((t) => rigaCedolaUnica(t, oggi));
-  const cedoleUniche = soloRendimentiAccettabili(conCedolaUnica);
+  const cedoleUniche = vivi
+    .filter((t) => t.tipo === "cedolaUnica" && !cedolaDefinitiva(t))
+    .map((t) => rigaCedolaUnica(t, oggi));
 
   return {
     data: oggi,
@@ -236,8 +240,7 @@ export function metricheCatalogo(catalogo: Catalogo): MetricheCatalogo {
     cedoleUniche,
     nascostiYtmNegativo:
       conFlussiNoti.length - flussiNoti.length +
-      (vivi.filter((t) => t.tipo === "ccteu").length - variabili.length) +
-      (conCedolaUnica.length - cedoleUniche.length),
+      (vivi.filter((t) => t.tipo === "ccteu").length - variabili.length),
     senzaEmissione: flussiNoti.filter((t) => t.tipo === "fisso" && !completa(t.emissione ?? undefined))
       .length,
   };
@@ -279,17 +282,17 @@ export function parametriTitolo(
  * browser, sugli stessi titoli che la pagina ha messo in tabella con quelle
  * di riferimento. Un titolo che con le sue commissioni rende meno di zero
  * resta, col suo rendimento negativo: è proprio quello che deve vedere. Gli
- * indicizzati non cambiano: il loro rendimento è lordo e senza commissioni.
+ * indicizzati non cambiano: il loro rendimento è lordo e senza commissioni;
+ * nemmeno le cedole uniche col minimo, che non hanno conti.
  */
 export function righeConCondizioni(
-  m: Pick<MetricheCatalogo, "data" | "flussiNoti" | "variabili" | "cedoleUniche">,
+  m: Pick<MetricheCatalogo, "data" | "flussiNoti" | "variabili">,
   euribor: Catalogo["euribor6m"],
   condizioni: CondizioniTabella,
-): Pick<MetricheCatalogo, "flussiNoti" | "variabili" | "cedoleUniche"> {
+): Pick<MetricheCatalogo, "flussiNoti" | "variabili"> {
   return {
     flussiNoti: m.flussiNoti.map((t) => rigaFlussiNoti(t, m.data, condizioni)),
     variabili: m.variabili.map((t) => rigaVariabile(t, m.data, euribor, condizioni)),
-    cedoleUniche: m.cedoleUniche.map((t) => rigaCedolaUnica(t, m.data, condizioni)),
   };
 }
 
@@ -319,6 +322,12 @@ function rigaFlussiNoti(
   const capitalGain = capitalGainRimborso(parametri);
   return {
     ...t,
+    // Il listino dà cedola zero alla cedola unica: in tabella c'è quella del
+    // motore, 22,70 / 5 = 4,54% l'anno, così l'ordine per cedola la mette fra
+    // i titoli che pagano altrettanto.
+    ...(t.tipo === "cedolaUnica"
+      ? { cedolaAnnua: parametri.cedolaAnnua, frequenzaCedola: parametri.frequenzaCedola }
+      : {}),
     categoria: parametri.categoria,
     scartoAnticipato,
     // Sui BOT con i dati d'asta è compensabile la parte fra prezzo teorico
@@ -394,33 +403,23 @@ function rigaVariabile(
 }
 
 /**
- * Una cedola sola, a scadenza. Con la cedola definitiva i conti sono quelli
- * di un titolo a flussi noti, dalla stessa funzione; col minimo del
- * collocamento niente conti, solo il motivo: un rendimento su una cedola che
- * non è la vera sarebbe un numero sbagliato presentato come giusto.
+ * Una cedola sola, a scadenza, col minimo del collocamento: niente conti,
+ * solo il motivo. Un rendimento su una cedola che non è la vera sarebbe un
+ * numero sbagliato presentato come giusto. Con la cedola definitiva il
+ * titolo è una riga a flussi noti (`rigaFlussiNoti`).
  */
-function rigaCedolaUnica(
-  t: TitoloValutato,
-  oggi: string,
-  condizioni: CondizioniTabella = CONDIZIONI_RIFERIMENTO,
-): RigaCedolaUnica {
-  // Rifatta con le condizioni di chi guarda, la riga arriva coi suoi conti:
-  // si riparte dal titolo, se no le metriche finirebbero dentro le metriche.
-  const { metriche: _conti, motivoNonCalcolabile: _motivo, anniResidui: _anni, ...titolo } =
-    t as TitoloValutato & Partial<RigaCedolaUnica>;
-  const cedolaUnica = titolo.cedolaUnica;
+function rigaCedolaUnica(t: TitoloValutato, oggi: string): RigaCedolaUnica {
+  const cedolaUnica = t.cedolaUnica;
   if (!cedolaUnica) throw new Error(`${t.isin}: titolo a cedola unica senza la cedola`);
   const motivo = motivoSenzaRendimento(cedolaUnica);
-  const metriche = motivo == null ? rigaFlussiNoti(titolo, oggi, condizioni) : null;
+  if (motivo == null) throw new Error(`${t.isin}: cedola unica definitiva, va fra i flussi noti`);
   return {
-    ...titolo,
+    ...t,
     // Il BTP Valore Insieme è un BTP: il fisco è quello dei titoli di Stato
     // italiani (lib/mercato/parametri.ts gli dà la stessa categoria).
     categoria: "btpFisso",
     cedolaUnica,
     anniResidui: anniResidui(oggi, t.dataScadenza),
-    ytmNettoPct: metriche?.ytmNettoPct ?? null,
-    metriche,
     motivoNonCalcolabile: motivo,
   };
 }

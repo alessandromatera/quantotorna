@@ -9,6 +9,7 @@ import {
   parametriTitolo,
   pct,
   righeConCondizioni,
+  titoliInElenco,
 } from "./metriche";
 
 /** Titoli inventati: ISIN, nomi e prezzi non sono di mercato. */
@@ -188,34 +189,41 @@ describe("metricheCatalogo", () => {
         cedolaUnica: { percentuale, definitiva, godimento: "2026-10-27" },
       });
 
-    it("con la cedola definitiva: 4,18% lordo e 3,69% netto, come Borsa Italiana", () => {
+    it("con la cedola definitiva sta fra i flussi noti: 4,18% lordo e 3,69% netto, come Borsa Italiana", () => {
       // Borsa Italiana scrive 4,17% e 3,69% a 100: 1,227^(1/5) − 1 = 4,176%,
       // e al netto (22,70% × 0,875 = 19,8625%) 3,690%.
       const m = metricheCatalogo(catalogo([insieme(true)], { data: "2026-10-23" }));
+      expect(m.cedoleUniche).toEqual([]);
+      const [r] = m.flussiNoti;
+      expect(r.cedolaUnica).toEqual({ percentuale: 22.7, definitiva: true, godimento: "2026-10-27" });
+      expect(r.categoria).toBe("btpFisso");
+      expect(r.ytmLordoPct).toBe(4.18);
+      expect(r.ytmNettoPct).toBe(3.69);
+      // 2.270 € lordi, 1.986,25 € netti sui 10.000 nominali comprati a 100.
+      expect(r.rendimentoNominale).toMatchObject({ incassi: 1_198_625, guadagno: 198_625 });
+      expect(r.durationModificata).toBeGreaterThan(4.7);
+      // Il listino le dà cedola zero: in tabella c'è quella del motore, che
+      // la ordina per cedola fra i titoli che pagano altrettanto l'anno.
+      expect(r.cedolaAnnua).toBeCloseTo(22.7 / 5, 10);
+      expect(r.frequenzaCedola).toBe(0.2);
+    });
+
+    it("col minimo del collocamento resta a parte, senza rendimento e col motivo", () => {
+      const m = metricheCatalogo(catalogo([insieme(false)], { data: "2026-10-23" }));
       expect(m.flussiNoti).toEqual([]);
       const [r] = m.cedoleUniche;
-      expect(r.motivoNonCalcolabile).toBeNull();
-      expect(r.metriche!.ytmLordoPct).toBe(4.18);
-      expect(r.metriche!.ytmNettoPct).toBe(3.69);
-      // 2.270 € lordi, 1.986,25 € netti sui 10.000 nominali comprati a 100.
-      expect(r.metriche!.rendimentoNominale).toMatchObject({ incassi: 1_198_625, guadagno: 198_625 });
-      expect(r.metriche!.durationModificata).toBeGreaterThan(4.7);
-    });
-
-    it("col minimo del collocamento resta in elenco senza rendimento, col motivo", () => {
-      const m = metricheCatalogo(catalogo([insieme(false)], { data: "2026-10-23" }));
-      const [r] = m.cedoleUniche;
-      expect(r.metriche).toBeNull();
+      expect(r.cedolaUnica.definitiva).toBe(false);
       expect(r.motivoNonCalcolabile).toMatch(/minimo.*22,25%/);
+      expect(titoliInElenco(m)).toBe(1);
     });
 
-    it("la riga si rifà con le condizioni di chi guarda", () => {
+    it("la riga si rifà con le condizioni di chi guarda, come gli altri fissi", () => {
       const c = catalogo([insieme(true)], { data: "2026-10-23" });
       const m = metricheCatalogo(c);
       const tariffa = { percentuale: 0.19, minimo: 295, massimo: 1_900, fisso: 0 };
       const con = righeConCondizioni(m, c.euribor6m, { nominale: 10_000, tariffa });
-      expect(con.cedoleUniche[0].metriche!.ytmNettoPct!).toBeLessThan(m.cedoleUniche[0].metriche!.ytmNettoPct!);
-      expect(righeConCondizioni(m, c.euribor6m, CONDIZIONI_RIFERIMENTO).cedoleUniche).toEqual(m.cedoleUniche);
+      expect(con.flussiNoti[0].ytmNettoPct!).toBeLessThan(m.flussiNoti[0].ytmNettoPct!);
+      expect(righeConCondizioni(m, c.euribor6m, CONDIZIONI_RIFERIMENTO).flussiNoti).toEqual(m.flussiNoti);
     });
 
     it("al motore arriva come una cedola sola, con il rateo in 30E/360", () => {

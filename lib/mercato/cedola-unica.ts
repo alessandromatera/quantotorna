@@ -12,12 +12,18 @@ import type { SchedaStepUp } from "./stepup";
  *
  * Durante il collocamento è il MINIMO garantito, che alla chiusura può solo
  * salire (il 23/10/2026 il MEF l'ha portata al 22,70%), e così la scheda lo
- * ha tenuto anche dopo. Un minimo non è la cedola: il titolo resta in
- * elenco senza rendimento finché la scheda non scrive la cedola definitiva
+ * ha tenuto anche dopo. Un minimo non è la cedola: il titolo resta in una
+ * scheda sua senza rendimento finché la scheda non scrive la cedola definitiva
  * (deciso dall'autore il 24/10/2026: si aspetta Borsa Italiana, niente
- * cedole scritte a mano nel codice). La forma della frase definitiva non si
- * è ancora vista: si presume quella di oggi senza «minimo», e ogni altro
- * testo scarta il titolo col motivo, mai una cedola indovinata.
+ * cedole scritte a mano nel codice). Dal 27/10/2026 la scheda scrive la
+ * definitiva:
+ *
+ *   «L'importo della cedola definitiva è pari al 22,70% del valore nominale
+ *   del prestito e verrà pagata in un'unica soluzione a scadenza»
+ *
+ * Si riconoscono queste due frasi; ogni altro testo scarta il titolo col
+ * motivo, mai una cedola indovinata. Con la definitiva il titolo sta fra i
+ * tassi fissi (lib/catalogo/metriche.ts).
  */
 export interface CedolaUnica {
   /** Percentuale del nominale, pagata una volta sola a scadenza (22.7 = 22,70%). */
@@ -36,7 +42,7 @@ export function cedolaUnicaDaScheda(
   const testo = scheda.descrizione;
   if (!testo) return { motivo: "la scheda di Borsa Italiana non descrive la cedola" };
   const trovata = testo.match(
-    /\bcedola\s+è\s+pari\s+al?\s*(\d+(?:,\d+)?)\s*%\s+del\s+valore\s+nominale\b[^.]*\bunica\s+soluzione\s+a\s+scadenza\b/i,
+    /\bcedola(?:\s+definitiva)?\s+è\s+pari\s+al?\s*(\d+(?:,\d+)?)\s*%\s+del\s+valore\s+nominale\b[^.]*\bunica\s+soluzione\s+a\s+scadenza\b/i,
   );
   const percentuale = trovata ? Number(trovata[1].replace(",", ".")) : null;
   if (percentuale == null || !(percentuale > 0 && percentuale < 100)) {

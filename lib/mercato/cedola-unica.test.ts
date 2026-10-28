@@ -10,12 +10,12 @@ import {
 const MINIMO =
   "L'importo minimo della cedola è pari al 22,25% del valore nominale del prestito e verrà pagata in un'unica soluzione a scadenza";
 /**
- * Lo stesso testo senza «minimo», come si presume lo scriverà Borsa Italiana
- * a cedola definitiva: un testo diverso da questi due scarta il titolo col
- * motivo, mai una cedola indovinata.
+ * Il testo della stessa scheda a cedola definitiva, il 27/10/2026: «minimo»
+ * è sparito e «definitiva» segue «cedola». Un testo diverso da questi due
+ * scarta il titolo col motivo, mai una cedola indovinata.
  */
 const DEFINITIVA =
-  "L'importo della cedola è pari al 22,70% del valore nominale del prestito e verrà pagata in un'unica soluzione a scadenza";
+  "L'importo della cedola definitiva è pari al 22,70% del valore nominale del prestito e verrà pagata in un'unica soluzione a scadenza";
 
 const scheda = (descrizione: string | null, godimento: string | null = "2026-10-27") => ({
   godimento,

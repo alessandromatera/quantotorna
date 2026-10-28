@@ -250,8 +250,11 @@ export default function Metodologia() {
               paga il rateo con lo storno del 12,5% come su ogni BTP. La cedola viene dalla scheda
               di Borsa Italiana: durante il collocamento c'è solo il minimo garantito, che alla
               chiusura può solo salire, e finché la scheda non scrive la cedola definitiva il titolo
-              resta in elenco senza rendimento. Il premio fedeltà, se c'è, spetta solo a chi ha
-              sottoscritto all'emissione e non entra.
+              resta in una scheda sua, senza rendimento. Con la cedola definitiva sta fra i tassi
+              fissi, accanto ai titoli di scadenza vicina: nella colonna della cedola c'è la cedola
+              unica, e l'ordine per cedola usa la sua media annua semplice (22,70% in cinque anni,
+              4,54% l'anno), senza interessi composti. Il premio fedeltà, se c'è, spetta solo a chi
+              ha sottoscritto all'emissione e non entra.
             </li>
           </Elenco>
         </Sezione>

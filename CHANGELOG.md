@@ -4,6 +4,10 @@ Cosa è cambiato in quantotorna, dal più recente. Lo stesso elenco sta sul
 sito, nella pagina Informazioni. Questo file si genera da `lib/novita.ts`
 con `npm run changelog`: si modifica lì, e un test controlla che coincidano.
 
+## 28/10/2026
+
+- BTP Valore Insieme di nuovo in elenco, con la cedola definitiva del 22,70%: rendimento, «Se lo compro» e «Se esco prima». Sta fra i tassi fissi, accanto ai titoli di scadenza vicina; la scheda a parte resta solo per i titoli a cedola unica ancora in collocamento.
+
 ## 26/10/2026
 
 - La tabella dei tassi fissi si può scorrere tutta di seguito, senza pagine: «Elenco intero», accanto a «Per anno» e «50 per pagina».

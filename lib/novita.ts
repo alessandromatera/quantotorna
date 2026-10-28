@@ -15,6 +15,12 @@ export interface Novita {
 
 export const NOVITA: Novita[] = [
   {
+    data: "2026-10-28",
+    voci: [
+      "BTP Valore Insieme di nuovo in elenco, con la cedola definitiva del 22,70%: rendimento, «Se lo compro» e «Se esco prima». Sta fra i tassi fissi, accanto ai titoli di scadenza vicina; la scheda a parte resta solo per i titoli a cedola unica ancora in collocamento.",
+    ],
+  },
+  {
     data: "2026-10-26",
     voci: [
       "La tabella dei tassi fissi si può scorrere tutta di seguito, senza pagine: «Elenco intero», accanto a «Per anno» e «50 per pagina».",

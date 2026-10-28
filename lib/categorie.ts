@@ -67,7 +67,8 @@ export type CategoriaStrumento = (typeof CATEGORIE_STRUMENTO)[number];
  *   nominale, pagata a scadenza insieme al capitale; il rateo matura in
  *   30E/360 su tutto il periodo. Il listino non la pubblica: viene dalla
  *   scheda di Borsa Italiana (lib/mercato/cedola-unica.ts), e finché è il
- *   minimo del collocamento il rendimento non si calcola.
+ *   minimo del collocamento il rendimento non si calcola. Con la cedola
+ *   definitiva la pagina lo mette fra i tassi fissi.
  */
 export const TIPI_CATALOGO = [
   "fisso",
