@@ -18,6 +18,7 @@ export const NOVITA: Novita[] = [
     data: "2026-10-28",
     voci: [
       "BTP Valore Insieme di nuovo in elenco, con la cedola definitiva del 22,70%: rendimento, «Se lo compro» e «Se esco prima». Sta fra i tassi fissi, accanto ai titoli di scadenza vicina; la scheda a parte resta solo per i titoli a cedola unica ancora in collocamento.",
+      "Rating degli Stati riletti: dodici su ventiquattro erano cambiati, fra cui Francia (A+), Belgio (AA-), Irlanda (AA+), Portogallo (A+), Grecia (BBB), Croazia e Cipro (A). S&P non valuta più l'Estonia, che resta senza rating. D'ora in poi si ricontrollano dopo ogni revisione che S&P pubblica.",
     ],
   },
   {

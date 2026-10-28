@@ -20,6 +20,10 @@
 #   job `avvisi` fallisce apposta, perché GitHub lo segnali all'autore per
 #   email. Il sito è già aggiornato, e il cron guarda solo la data del
 #   catalogo: non rilancia niente.
+# - Rating da riverificare (S&P ha pubblicato una revisione dopo che il
+#   rating è stato scritto nel codice, o il suo calendario è finito): lo
+#   stesso avviso, ogni giorno finché il codice non è corretto
+#   (lib/mercato/revisioni-rating.ts).
 # - Push su main: test, poi ricompila col catalogo già pubblicato, senza
 #   riscaricare niente.
 # - Primo giro, quando il sito non c'è ancora: a mano, con «da zero». Le
@@ -66,6 +70,8 @@ jobs:
     outputs:
       # Vuoto se non si è scaricato niente (push) o senza il catalogo di ieri.
       scartate_nuove: ${{ steps.dati.outputs.scartate_nuove }}
+      # Vuoto se non si è scaricato niente (push).
+      rating_da_riverificare: ${{ steps.dati.outputs.rating_da_riverificare }}
     env:
       # Le date dei conti sono quelle italiane (`giornoDeiPrezzi`).
       TZ: Europe/Rome
@@ -139,13 +145,21 @@ jobs:
   # Dopo la pubblicazione, mai prima: un avviso non deve fermare il rinnovo.
   avvisi:
     needs: [compila, pubblica]
-    if: fromJSON(needs.compila.outputs.scartate_nuove || '0') > 0
+    if: >-
+      fromJSON(needs.compila.outputs.scartate_nuove || '0') > 0 ||
+      fromJSON(needs.compila.outputs.rating_da_riverificare || '0') > 0
     runs-on: ubuntu-latest
     permissions: {}
     steps:
-      - name: Titoli lasciati fuori per un motivo nuovo
+      - name: Titoli lasciati fuori per un motivo nuovo, rating da riverificare
         env:
-          QUANTE: ${{ needs.compila.outputs.scartate_nuove }}
+          SCARTATE: ${{ needs.compila.outputs.scartate_nuove || '0' }}
+          RATING: ${{ needs.compila.outputs.rating_da_riverificare || '0' }}
         run: |
-          echo "::error::$QUANTE titoli lasciati fuori per un motivo che ieri non c'era: l'elenco è nel riepilogo del giro. Il sito è aggiornato."
+          if [ "$SCARTATE" -gt 0 ]; then
+            echo "::error::$SCARTATE titoli lasciati fuori per un motivo che ieri non c'era: l'elenco è nel riepilogo del giro. Il sito è aggiornato."
+          fi
+          if [ "$RATING" -gt 0 ]; then
+            echo "::error::$RATING rating da riverificare sul sito di S&P: l'elenco è nel riepilogo del giro. Il sito è aggiornato."
+          fi
           exit 1

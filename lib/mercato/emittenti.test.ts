@@ -214,12 +214,14 @@ describe("la tabella degli emittenti", () => {
   /**
    * Chi ha il rating è chi il MOT quota davvero: sono le righe che finiscono
    * accanto a un rendimento, dove la solidità serve a spiegarlo. Sugli altri
-   * il campo resta null invece di ospitare un valore scritto a memoria.
+   * il campo resta null invece di ospitare un valore scritto a memoria. Un
+   * emittente sul MOT senza rating (S&P non valuta più l'Estonia) dice perché.
    */
-  it("ha il rating, con la sua data, esattamente sugli emittenti sul MOT", () => {
+  it("ha il rating, con la sua data, sugli emittenti sul MOT, o il motivo per cui manca", () => {
     for (const e of EMITTENTI) {
       const d = DESCRIZIONI[e];
-      expect(d.rating != null).toBe(d.suMot);
+      expect(d.rating != null).toBe(d.suMot && d.senzaRating == null);
+      if (d.senzaRating != null) expect(d.suMot).toBe(true);
       // Un rating senza data non dice a chi legge quanto fidarsi: o ci sono
       // tutti e due o non c'è nessuno dei due.
       expect(d.ratingRilevato != null).toBe(d.rating != null);

@@ -319,7 +319,9 @@ export default function Metodologia() {
             </li>
             <li>
               <strong>Rating</strong>: S&P, scala del debito sovrano a lungo termine, rilevati a
-              mano; la data è nel suggerimento accanto a ogni titolo.
+              mano e ricontrollati dopo ogni revisione che S&P pubblica, alle date del calendario
+              che le agenzie devono fissare per gli Stati dell'Unione; la data della rilevazione è
+              nel suggerimento accanto a ogni titolo.
             </li>
           </Elenco>
           <p>

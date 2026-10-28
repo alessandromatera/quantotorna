@@ -501,14 +501,14 @@ function CellaTitolo({
                 sull'Italia: su un listino che mescola Italia e Germania è la
                 prima cosa da sapere, perché spiega perché due titoli di pari
                 scadenza rendono diverso. La data di rilevazione del rating sta
-                nel `title`: è un dato per riga, perché i rating non sono stati
-                rilevati tutti lo stesso giorno. */}
+                nel `title`: è un dato per riga, perché ogni rating si rilegge
+                quando S&P lo rivede, non tutti lo stesso giorno. */}
             <Badge>
               <span
                 title={
                   e.ratingRilevato
                     ? `Rating ${RATING_FONTE}, rilevato a mano il ${formatDataIT(e.ratingRilevato)}. Va riverificato sul sito dell'agenzia.`
-                    : undefined
+                    : e.senzaRating
                 }
               >
                 <Termine chiave="rating">
@@ -1226,7 +1226,7 @@ export function Mercato({
                 <Termine chiave="rating">rating</Termine> è dell'emittente e non del singolo
                 titolo, rilevato a mano ({RATING_FONTE}; il più vecchio il{" "}
                 <strong>{formatDataIT(RATING_RILEVATI)}</strong>): un declassamento non si
-                aggiorna da solo.
+                aggiorna da solo, ma si ricontrolla dopo ogni revisione che S&P pubblica.
               </p>
             </details>
 

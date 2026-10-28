@@ -17,7 +17,9 @@
  *
  * Le righe lasciate fuori per un motivo che ieri non c'era finiscono nel
  * riepilogo del giro su GitHub, e il loro numero fra gli output dello step
- * (`scartate_nuove`): il workflow, dopo aver pubblicato, lo segnala.
+ * (`scartate_nuove`): il workflow, dopo aver pubblicato, lo segnala. Allo
+ * stesso modo i rating da riverificare, perché S&P ha pubblicato una
+ * revisione dopo che sono stati scritti (`rating_da_riverificare`).
  */
 import { appendFileSync, existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
@@ -26,6 +28,7 @@ import { leggiCatalogo } from "../lib/catalogo/formato";
 import { motivoSuUnaRiga, riepilogoScartateNuove, scartateNuove } from "../lib/catalogo/scartate";
 import { aggiornaCatalogo, type RapportoScaricamento } from "../lib/catalogo/scaricamento";
 import { giornoDeiPrezzi, oggiISO } from "../lib/date";
+import { avvisiRating, riepilogoAvvisiRating } from "../lib/mercato/revisioni-rating";
 import { dataGodimentoMot, scaricaListaBtp, schedaStepUpMot } from "../lib/prezzi/borsaitaliana";
 import { scaricaStoricoScambi } from "../lib/prezzi/euronext";
 import { elencaDocumentiMef, leggiDocumentiMef } from "../lib/prezzi/mef";
@@ -85,6 +88,7 @@ async function main() {
   } else {
     console.log("Senza il catalogo di ieri gli scartati non si confrontano.");
   }
+  segnalaRating(avvisiRating(catalogo.data));
 }
 
 /**
@@ -102,6 +106,19 @@ function segnalaScartateNuove(nuove: { isin: string; motivo: string }[]) {
     if (output) appendFileSync(output, `scartate_nuove=${nuove.length}\n`);
   } catch (e) {
     console.log(`ATTENZIONE: scartati nuovi non segnalati a GitHub (${e instanceof Error ? e.message : String(e)}).`);
+  }
+}
+
+/** I rating da riverificare, come le scartate nuove: log, riepilogo, output. */
+function segnalaRating(avvisi: string[]) {
+  for (const a of avvisi) console.log(`RATING DA RIVERIFICARE: ${a}`);
+  try {
+    const riepilogo = process.env.GITHUB_STEP_SUMMARY;
+    if (riepilogo && avvisi.length > 0) appendFileSync(riepilogo, riepilogoAvvisiRating(avvisi));
+    const output = process.env.GITHUB_OUTPUT;
+    if (output) appendFileSync(output, `rating_da_riverificare=${avvisi.length}\n`);
+  } catch (e) {
+    console.log(`ATTENZIONE: rating da riverificare non segnalati a GitHub (${e instanceof Error ? e.message : String(e)}).`);
   }
 }
 

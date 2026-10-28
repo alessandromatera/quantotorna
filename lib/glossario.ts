@@ -112,7 +112,7 @@ export const GLOSSARIO: Record<string, VoceGlossario> = {
   rating: {
     titolo: "Rating dell'emittente",
     testo:
-      "Il giudizio di un'agenzia sulla capacità dello Stato di ripagare il debito, dalla AAA (la più solida) in giù. È dell'EMITTENTE, non del singolo titolo: tutti i BTP hanno il rating dell'Italia. Spiega perché due titoli di pari scadenza rendono diverso — il maggior rendimento è il premio che il mercato chiede per il rischio, non un affare. Qui è un valore inserito a mano e datato, non scaricato: un declassamento non si aggiorna da solo.",
+      "Il giudizio di un'agenzia sulla capacità dello Stato di ripagare il debito, dalla AAA (la più solida) in giù. È dell'EMITTENTE, non del singolo titolo: tutti i BTP hanno il rating dell'Italia. Spiega perché due titoli di pari scadenza rendono diverso — il maggior rendimento è il premio che il mercato chiede per il rischio, non un affare. Qui è un valore inserito a mano e datato, non scaricato: un declassamento non si aggiorna da solo, ma si ricontrolla dopo ogni revisione dell'agenzia.",
   },
   titoloStatoEstero: {
     titolo: "Titoli di Stato esteri (white list)",

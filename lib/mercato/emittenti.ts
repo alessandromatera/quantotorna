@@ -99,8 +99,13 @@ export interface DescrizioneEmittente {
    * è un dato inserito a mano e datato, non scaricato.
    */
   rating: string | null;
-  /** Quando quel rating è stato inserito qui dentro (ISO). */
+  /** Quando quel rating è stato letto e scritto qui dentro (ISO). */
   ratingRilevato: string | null;
+  /**
+   * Perché un emittente quotato sul MOT non ha il rating S&P: la pagina
+   * scrive «rating n.d.», e qui sta il motivo.
+   */
+  senzaRating?: string;
   /**
    * Cedole per anno sui titoli in EURO di questo emittente. L'Italia paga
    * semestrale sui titoli domestici, tutti i sovrani dell'area euro pagano
@@ -134,28 +139,33 @@ export interface DescrizioneEmittente {
 }
 
 /**
- * DATA in cui i rating sono stati inseriti a mano, e data mostrata nella UI.
+ * DATA in cui i rating sono stati riletti tutti insieme l'ultima volta, e
+ * data mostrata nella UI.
  *
- * NON è un dato scaricato: il MOT non lo pubblica e non esiste una fonte
- * gratuita e stabile da cui prenderlo, quindi è una costante del codice. Il
- * rating è dell'EMITTENTE e non del singolo titolo — tutti i BTP hanno il
- * rating dell'Italia — perciò i valori da tenere aggiornati sono pochi.
+ * NON è un dato scaricato: il MOT non lo pubblica e nessuna fonte ufficiale
+ * si lascia leggere da un programma — le agenzie mostrano i rating dopo la
+ * registrazione e ne vietano lo scaricamento automatico, la piattaforma
+ * europea dell'ESMA li ha tutti ma la ricerca chiede un CAPTCHA. Quindi è
+ * una costante del codice. Il rating è dell'EMITTENTE e non del singolo
+ * titolo — tutti i BTP hanno il rating dell'Italia — perciò i valori da
+ * tenere aggiornati sono pochi.
  *
  * Limite dichiarato, ed è il motivo per cui la data è esposta: un
- * declassamento non si aggiorna da solo, e questi valori vanno RILETTI sul
- * sito dell'agenzia e corretti qui. Si mostra la sola scala S&P per non dare
- * l'impressione di un consenso fra agenzie che non c'è.
+ * declassamento non si aggiorna da solo. Quando S&P pubblica una revisione
+ * il giro lo segnala all'autore (lib/mercato/revisioni-rating.ts): il valore
+ * va riletto e corretto qui, con la sua data in `ratingRilevato`, che è per
+ * emittente. Si mostra la sola scala S&P per non dare l'impressione di un
+ * consenso fra agenzie che non c'è.
  *
- * `ratingRilevato` è per emittente perché non sono stati inseriti tutti lo
- * stesso giorno: i primi cinque il 27/07/2026, gli altri il 24/08/2026,
- * quando la correzione della paginazione ha fatto comparire in catalogo il
- * resto dei sovrani europei.
+ * Riletti il 28/10/2026 sui comunicati dei Tesori e delle agenzie del debito
+ * e sulla stampa, perché S&P mostra i suoi solo dopo la registrazione: dei
+ * ventiquattro valori inseriti il 27/07 e il 24/08/2026 ne erano cambiati
+ * dodici, alcuni da anni. La Francia era AA-, ed è A+ dal 17/10/2025; la
+ * Croazia BBB+, A- dal 2024 e A dal 13/03/2026; l'Estonia il rating S&P non
+ * ce l'ha più.
  */
-export const RATING_RILEVATI = "2026-07-27";
+export const RATING_RILEVATI = "2026-10-28";
 export const RATING_FONTE = "S&P, scala del debito sovrano a lungo termine";
-
-/** Data di inserimento dei rating aggiunti insieme agli altri Stati europei. */
-const RILEVATI_AGOSTO = "2026-08-24";
 
 /** ISIN sotto cui i sovrani emettono in euro oltre al proprio codice paese. */
 const ISIN_INTERNAZIONALI = ["XS", "EU"];
@@ -187,7 +197,7 @@ function quotato(
   paese: string,
   marcatori: string[],
   rating: string,
-  ratingRilevato = RILEVATI_AGOSTO,
+  ratingRilevato = RATING_RILEVATI,
 ): DescrizioneEmittente {
   return stato(nome, breve, paese, marcatori, {
     rating,
@@ -207,7 +217,6 @@ export const DESCRIZIONI: Record<Emittente, DescrizioneEmittente> = {
       // XS restano fuori di proposito, vedi NON_TRATTATI.
       ["btp", "bot", "cct", "ctz"],
       "BBB+",
-      RATING_RILEVATI,
     ),
     // UNICO emittente a cedola semestrale, e non è un dettaglio: il listino
     // pubblica la cedola di PERIODO sui titoli italiani e già annua su
@@ -221,7 +230,6 @@ export const DESCRIZIONI: Record<Emittente, DescrizioneEmittente> = {
     "DE",
     ["bund", "bobl", "schatz", "bundei"],
     "AAA",
-    RATING_RILEVATI,
   ),
   ES: quotato(
     "Regno di Spagna",
@@ -229,7 +237,6 @@ export const DESCRIZIONI: Record<Emittente, DescrizioneEmittente> = {
     "ES",
     ["obligaciones", "obligacionesei", "bonos", "bonosei"],
     "A+",
-    RATING_RILEVATI,
   ),
   AT: quotato(
     "Repubblica d'Austria",
@@ -237,15 +244,13 @@ export const DESCRIZIONI: Record<Emittente, DescrizioneEmittente> = {
     "AT",
     ["austria", "republautric"],
     "AA+",
-    RATING_RILEVATI,
   ),
   BE: quotato(
     "Regno del Belgio",
     "Belgio",
     "BE",
     ["belgium", "olo"],
-    "AA",
-    RATING_RILEVATI,
+    "AA-",
   ),
   FR: quotato(
     "Repubblica Francese",
@@ -253,7 +258,7 @@ export const DESCRIZIONI: Record<Emittente, DescrizioneEmittente> = {
     "FR",
     // "Oati" e "Oatei" sono i due indicizzati; "oatstrip…" i titoli separati.
     ["oat", "oatei", "oati", "oatstrip", "oatstripfran", "btan", "france"],
-    "AA-",
+    "A+",
   ),
   NL: quotato(
     "Regno dei Paesi Bassi",
@@ -263,33 +268,37 @@ export const DESCRIZIONI: Record<Emittente, DescrizioneEmittente> = {
     "AAA",
   ),
   FI: quotato("Repubblica di Finlandia", "Finlandia", "FI", ["finland", "rfgb"], "AA+"),
-  IE: quotato("Irlanda", "Irlanda", "IE", ["ireland", "irish"], "AA"),
-  PT: quotato("Repubblica Portoghese", "Portogallo", "PT", ["portugal", "ot"], "A"),
+  IE: quotato("Irlanda", "Irlanda", "IE", ["ireland", "irish"], "AA+"),
+  PT: quotato("Repubblica Portoghese", "Portogallo", "PT", ["portugal", "ot"], "A+"),
   GR: quotato(
     "Repubblica Ellenica",
     "Grecia",
     "GR",
     ["ggb", "greece", "hellenic"],
-    "BBB-",
+    "BBB",
   ),
   SI: quotato(
     "Repubblica di Slovenia",
     "Slovenia",
     "SI",
     ["slovenia", "slovenija"],
-    "AA-",
+    "AA",
   ),
-  CY: quotato("Repubblica di Cipro", "Cipro", "CY", ["cyprus"], "BBB+"),
-  HR: quotato("Repubblica di Croazia", "Croazia", "HR", ["croatia"], "BBB+"),
-  EE: quotato("Repubblica di Estonia", "Estonia", "EE", ["estonia"], "A+"),
-  LT: quotato("Repubblica di Lituania", "Lituania", "LT", ["lithuania"], "A+"),
-  LV: quotato("Repubblica di Lettonia", "Lettonia", "LV", ["latvia"], "A+"),
+  CY: quotato("Repubblica di Cipro", "Cipro", "CY", ["cyprus"], "A"),
+  HR: quotato("Repubblica di Croazia", "Croazia", "HR", ["croatia"], "A"),
+  EE: stato("Repubblica di Estonia", "Estonia", "EE", ["estonia"], {
+    suMot: true,
+    senzaRating:
+      "S&P non valuta più l'Estonia: il rating è stato ritirato fra il 2024 e il 2025, su richiesta dello Stato.",
+  }),
+  LT: quotato("Repubblica di Lituania", "Lituania", "LT", ["lithuania"], "A"),
+  LV: quotato("Repubblica di Lettonia", "Lettonia", "LV", ["latvia"], "A"),
 
   // ── Fuori dall'euro ma sul listino con emissioni in euro ───────────────
   RO: quotato("Romania", "Romania", "RO", ["romania"], "BBB-"),
   PL: quotato("Repubblica di Polonia", "Polonia", "PL", ["poland", "polska"], "A-"),
   HU: quotato("Ungheria", "Ungheria", "HU", ["hungary"], "BBB-"),
-  BG: quotato("Repubblica di Bulgaria", "Bulgaria", "BG", ["bulgaria"], "BBB"),
+  BG: quotato("Repubblica di Bulgaria", "Bulgaria", "BG", ["bulgaria"], "BBB+"),
 
   // ── White list europea, oggi non quotata sul MOT ───────────────────────
   CZ: stato("Repubblica Ceca", "Rep. Ceca", "CZ", ["czech"]),
@@ -309,7 +318,7 @@ export const DESCRIZIONI: Record<Emittente, DescrizioneEmittente> = {
     nome: "Unione Europea (SURE, NextGenerationEU)",
     breve: "Unione Eur.",
     rating: "AA+",
-    ratingRilevato: RILEVATI_AGOSTO,
+    ratingRilevato: RATING_RILEVATI,
     frequenzaCedola: 1,
     isin: [],
     marcatori: ["eu", "european union"],
@@ -320,7 +329,7 @@ export const DESCRIZIONI: Record<Emittente, DescrizioneEmittente> = {
     nome: "Meccanismo Europeo di Stabilità (ESM)",
     breve: "MES",
     rating: "AAA",
-    ratingRilevato: RILEVATI_AGOSTO,
+    ratingRilevato: RATING_RILEVATI,
     frequenzaCedola: 1,
     isin: [],
     marcatori: ["esm"],
