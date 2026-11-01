@@ -25,10 +25,12 @@ titolo, e dice anche quanti euro si ritrovano a scadenza.
   lo zainetto; lo storno dell'imposta sul rateo pagato all'acquisto; la
   plusvalenza misurata dal prezzo teorico e non da 100. Ogni
   semplificazione è scritta nella [metodologia](https://quantotorna.it/metodologia/).
-- **Un clic su un titolo** apre due conti: «Se lo compro», il conto del
-  regolamento col tuo nominale, il tuo prezzo e le tue commissioni; e «Se
+- **Un clic su un titolo** apre tre conti: «Se lo compro», il conto del
+  regolamento col tuo nominale, il tuo prezzo e le tue commissioni; «Se
   esco prima», cosa resta in mano vendendo prima della scadenza, con i tassi
-  che salgono o scendono e il tuo zainetto fiscale.
+  che salgono o scendono e il tuo zainetto fiscale; e «Flussi di cassa», il
+  calendario di acquisto, cedole e rimborso con lordo, imposte, netto e
+  cumulato, senza reinvestire le cedole.
 - **Le tue condizioni**: nominale e commissioni del tuo intermediario
   valgono per la tabella e per i conti sotto ogni titolo; lo zainetto per
   «Se esco prima». Si salvano nel tuo browser e non escono di lì.

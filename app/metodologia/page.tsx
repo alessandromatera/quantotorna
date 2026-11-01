@@ -271,6 +271,15 @@ export default function Metodologia() {
             vendita vera: imposta su cedole, rateo e disaggio maturato, plusvalenza o minusvalenza
             sul prezzo di acquisto, il tuo zainetto, le commissioni della tua tariffa.
           </p>
+          <p>
+            «Flussi di cassa» mette in fila, data per data, i soldi di chi compra oggi al prezzo di
+            chiusura e tiene fino a scadenza, col nominale e la tariffa delle tue condizioni: prima
+            l'acquisto al regolamento, per lo stesso costo netto di «Se lo compro», poi le cedole
+            e il rimborso a 100, senza commissione di vendita. Gli importi netti sono i flussi dello
+            YTM netto, e la somma dei netti meno il costo è il guadagno netto di «Se lo compro»,
+            al centesimo. La prima cedola è tassata per intero, perché l'imposta sul rateo pagato è
+            già stornata nel costo; le cedole non si reinvestono.
+          </p>
         </Sezione>
 
         <Sezione chiave="escluso">

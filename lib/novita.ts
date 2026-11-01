@@ -15,6 +15,12 @@ export interface Novita {
 
 export const NOVITA: Novita[] = [
   {
+    data: "2026-11-01",
+    voci: [
+      "Sotto ogni titolo dei tassi fissi c'è una terza scheda, «Flussi di cassa»: il calendario dei soldi di chi compra oggi e tiene fino a scadenza, con l'acquisto, ogni cedola e il rimborso, e per ciascuna data lordo, imposte, netto e cumulato. Il totale è il guadagno netto di «Se lo compro». Le cedole non si reinvestono.",
+    ],
+  },
+  {
     data: "2026-10-28",
     voci: [
       "BTP Valore Insieme di nuovo in elenco, con la cedola definitiva del 22,70%: rendimento, «Se lo compro» e «Se esco prima». Sta fra i tassi fissi, accanto ai titoli di scadenza vicina; la scheda a parte resta solo per i titoli a cedola unica ancora in collocamento.",

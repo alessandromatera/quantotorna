@@ -5,6 +5,7 @@ import { CurvaRendimenti, type PuntoCurva } from "@/components/grafici";
 import { LinkStrumento } from "@/components/link-strumento";
 import { MenuFiltro, NotaMenu, OpzioneFiltro } from "@/components/menu-filtro";
 import { AvantiIndietro, ElencoPagine, SceltaDivisione } from "@/components/pagine-tabella";
+import { FlussiCassa } from "@/components/flussi-cassa";
 import { SimulaAcquisto } from "@/components/simula-acquisto";
 import { Termine } from "@/components/termine";
 import {
@@ -94,7 +95,7 @@ const COLORE_ESTERO = "var(--serie-5)";
 type Scheda = "fissi" | "variabili" | "indicizzati" | "cedoleUniche";
 
 /** Cosa mostra il dettaglio aperto sotto una riga. */
-type Vista = "acquisto" | "uscita";
+type Vista = "acquisto" | "uscita" | "flussi";
 
 /**
  * Colonna «Scambi», uguale nelle tre tabelle: la seduta tipica e quante
@@ -592,7 +593,8 @@ function Uscita({
 /**
  * Il dettaglio sotto una riga dei fissi: cosa comporta il titolo, poi le due
  * domande che la tabella non risolve — quanto spendo e quanto torna col mio
- * nominale e le mie commissioni, e cosa resta uscendo prima.
+ * nominale e le mie commissioni, cosa resta uscendo prima, e quando arrivano
+ * i soldi.
  */
 function Dettaglio({
   titolo: t,
@@ -621,6 +623,7 @@ function Dettaglio({
           voci={[
             { valore: "acquisto", nome: "Se lo compro" },
             { valore: "uscita", nome: "Se esco prima" },
+            { valore: "flussi", nome: "Flussi di cassa" },
           ]}
           valore={vista}
           onCambia={onVista}
@@ -647,12 +650,19 @@ function Dettaglio({
           tariffa={condizioni.tariffa}
           ytmTabella={t.ytmNettoPct}
         />
-      ) : (
+      ) : vista === "uscita" ? (
         <Uscita
           titolo={t}
           oggi={oggi}
           nominale={condizioni.nominale}
           contesto={contesto}
+          tariffa={condizioni.tariffa}
+        />
+      ) : (
+        <FlussiCassa
+          titolo={t}
+          oggi={oggi}
+          nominale={condizioni.nominale}
           tariffa={condizioni.tariffa}
         />
       )}
@@ -1159,8 +1169,9 @@ export function Mercato({
             >
               Titoli i cui incassi sono certi già oggi, con le metriche su{" "}
               {formatNumero(nominale)} € nominali. Un clic sulla riga apre il conto d'acquisto col
-              tuo nominale, il tuo prezzo e le tue commissioni, e «Se esco prima»: cosa resta in
-              mano vendendo prima della scadenza.{" "}
+              tuo nominale, il tuo prezzo e le tue commissioni; «Se esco prima»: cosa resta in
+              mano vendendo prima della scadenza; «Flussi di cassa»: il calendario di cedole e
+              rimborso.{" "}
               {/* L'ordine si sceglie dalle intestazioni; qui lo si dice a
                   parole, perché sul telefono le intestazioni scorrono fuori
                   dallo schermo. */}
@@ -1346,7 +1357,7 @@ export function Mercato({
               Una cedola sola, pagata a scadenza insieme al capitale, durante il collocamento: c'è
               solo il minimo garantito, che alla chiusura può solo salire, e il rendimento non si
               calcola. Quando Borsa Italiana pubblica la cedola definitiva il titolo passa fra i
-              tassi fissi, con rendimento, «Se lo compro» e «Se esco prima».
+              tassi fissi, con rendimento, «Se lo compro», «Se esco prima» e «Flussi di cassa».
             </Introduzione>
             <Tabella
               colonne={colonneCedolaUnica(nominale)}

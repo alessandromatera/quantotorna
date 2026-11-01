@@ -4,6 +4,10 @@ Cosa è cambiato in quantotorna, dal più recente. Lo stesso elenco sta sul
 sito, nella pagina Informazioni. Questo file si genera da `lib/novita.ts`
 con `npm run changelog`: si modifica lì, e un test controlla che coincidano.
 
+## 01/11/2026
+
+- Sotto ogni titolo dei tassi fissi c'è una terza scheda, «Flussi di cassa»: il calendario dei soldi di chi compra oggi e tiene fino a scadenza, con l'acquisto, ogni cedola e il rimborso, e per ciascuna data lordo, imposte, netto e cumulato. Il totale è il guadagno netto di «Se lo compro». Le cedole non si reinvestono.
+
 ## 28/10/2026
 
 - BTP Valore Insieme di nuovo in elenco, con la cedola definitiva del 22,70%: rendimento, «Se lo compro» e «Se esco prima». Sta fra i tassi fissi, accanto ai titoli di scadenza vicina; la scheda a parte resta solo per i titoli a cedola unica ancora in collocamento.

@@ -86,9 +86,9 @@ export default function Privacy() {
                 operativo;
               </li>
               <li>
-                quali titoli si aprono, se si guarda «Se esco prima», se si usa la ricerca, se si
-                salvano le condizioni, se si passa ai CCTeu o agli indicizzati, e i clic sui dati
-                aperti e sui link verso altri siti.
+                quali titoli si aprono, se si guardano «Se esco prima» o «Flussi di cassa», se si
+                usa la ricerca, se si salvano le condizioni, se si passa ai CCTeu o agli
+                indicizzati, e i clic sui dati aperti e sui link verso altri siti.
               </li>
             </ul>
             <p>
