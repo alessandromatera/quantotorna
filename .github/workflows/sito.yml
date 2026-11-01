@@ -15,11 +15,12 @@
 #   online: se è di oggi e generato dalle 16:45 UTC non chiede niente, e se
 #   un giro fallisce lo richiede più tardi.
 # - Titoli lasciati fuori per un motivo che ieri non c'era (un titolo nuovo
-#   che il motore non sa leggere, una scheda scritta in un altro modo): lo
-#   scaricamento li scrive nel riepilogo del giro, e dopo la pubblicazione il
-#   job `avvisi` fallisce apposta, perché GitHub lo segnali all'autore per
-#   email. Il sito è già aggiornato, e il cron guarda solo la data del
-#   catalogo: non rilancia niente.
+#   che il motore non sa leggere, una scheda scritta in un altro modo; non le
+#   esclusioni decise apposta, come KfW o EFSF): lo scaricamento li scrive
+#   nel riepilogo del giro, e dopo la pubblicazione il job `avvisi` fallisce
+#   apposta, perché GitHub lo segnali all'autore per email. Il sito è già
+#   aggiornato, e il cron guarda solo la data del catalogo: non rilancia
+#   niente.
 # - Rating da riverificare (S&P ha pubblicato una revisione dopo che il
 #   rating è stato scritto nel codice, o il suo calendario è finito): lo
 #   stesso avviso, ogni giorno finché il codice non è corretto

@@ -617,6 +617,16 @@ function analizzaNome(nome: string, isin?: string): EsitoNome {
 }
 
 /**
+ * Se il motivo di scarto è una esclusione decisa apposta, cioè quello che
+ * `analizzaNome` costruisce da NON_TRATTATI («nome: testo»). Il testo non si
+ * ripete: si confronta con la tabella, così le due cose non possono
+ * divergere.
+ */
+export function motivoEsclusioneVoluta(motivo: string): boolean {
+  return Object.values(NON_TRATTATI).some((testo) => motivo.endsWith(`: ${testo}`));
+}
+
+/**
  * Perché una riga NON è stata riconosciuta. Serve a rispondere a chi vede un
  * titolo sul MOT e non lo trova in catalogo: «non riconosciuto» va bene per
  * l'ennesimo corporate, non per KfW o per l'EFSF, che sono fuori per una

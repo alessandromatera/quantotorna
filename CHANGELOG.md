@@ -7,6 +7,7 @@ con `npm run changelog`: si modifica lì, e un test controlla che coincidano.
 ## 01/11/2026
 
 - Sotto ogni titolo dei tassi fissi c'è una terza scheda, «Flussi di cassa»: il calendario dei soldi di chi compra oggi e tiene fino a scadenza, con l'acquisto, ogni cedola e il rimborso, e per ciascuna data lordo, imposte, netto e cumulato. Il totale è il guadagno netto di «Se lo compro». Le cedole non si reinvestono.
+- Una tariffa con solo il minimo, senza percentuale, ora entra nei conti: prima, con la percentuale a zero, la commissione risultava nulla.
 
 ## 28/10/2026
 

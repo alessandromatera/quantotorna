@@ -15,11 +15,12 @@
  * quello di ieri. Il file nuovo si scrive accanto e poi si sostituisce, così
  * un'interruzione a metà non lascia mai un catalogo troncato.
  *
- * Le righe lasciate fuori per un motivo che ieri non c'era finiscono nel
- * riepilogo del giro su GitHub, e il loro numero fra gli output dello step
- * (`scartate_nuove`): il workflow, dopo aver pubblicato, lo segnala. Allo
- * stesso modo i rating da riverificare, perché S&P ha pubblicato una
- * revisione dopo che sono stati scritti (`rating_da_riverificare`).
+ * Le righe lasciate fuori per un motivo che ieri non c'era (non le
+ * esclusioni decise apposta, come KfW) finiscono nel riepilogo del giro su
+ * GitHub, e il loro numero fra gli output dello step (`scartate_nuove`): il
+ * workflow, dopo aver pubblicato, lo segnala. Allo stesso modo i rating da
+ * riverificare, perché S&P ha pubblicato una revisione dopo che sono stati
+ * scritti (`rating_da_riverificare`).
  */
 import { appendFileSync, existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
@@ -29,7 +30,7 @@ import { motivoSuUnaRiga, riepilogoScartateNuove, scartateNuove } from "../lib/c
 import { aggiornaCatalogo, type RapportoScaricamento } from "../lib/catalogo/scaricamento";
 import { giornoDeiPrezzi, oggiISO } from "../lib/date";
 import { avvisiRating, riepilogoAvvisiRating } from "../lib/mercato/revisioni-rating";
-import { dataGodimentoMot, scaricaListaBtp, schedaStepUpMot } from "../lib/prezzi/borsaitaliana";
+import { cedolaAnnuaSchedaMot, dataGodimentoMot, scaricaListaBtp, schedaStepUpMot } from "../lib/prezzi/borsaitaliana";
 import { scaricaStoricoScambi } from "../lib/prezzi/euronext";
 import { elencaDocumentiMef, leggiDocumentiMef } from "../lib/prezzi/mef";
 import { emissioneOnvista } from "../lib/prezzi/onvista";
@@ -61,6 +62,7 @@ async function main() {
       elencaDocumentiMef,
       leggiDocumentiMef,
       schedaStepUp: schedaStepUpMot,
+      cedolaAnnuaScheda: cedolaAnnuaSchedaMot,
       emissioneOnvista,
       dataGodimento: dataGodimentoMot,
       scambi: scaricaStoricoScambi,

@@ -307,7 +307,8 @@ export default function Metodologia() {
             <li>
               <strong>Borsa Italiana</strong>: i listini del MOT (BTP, CCT, BOT, titoli di Stato
               esteri e sovranazionali) con l'ultimo prezzo; la scheda del titolo per il piano degli
-              step-up e, quando manca, la data di godimento.
+              step-up, la cedola quando il listino non la dà (per esempio un OAT€i senza la cedola nel
+              nome) e, quando manca, la data di godimento.
             </li>
             <li>
               <strong>MEF</strong>, Dipartimento del Tesoro: i risultati d'asta dell'anno, col

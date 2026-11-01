@@ -38,6 +38,7 @@ import {
   riconosciEmittente,
   type Emittente,
 } from "../mercato/emittenti";
+import type { LetturaCedola } from "../mercato/cedola-scheda";
 import type { SchedaStepUp } from "../mercato/stepup";
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36";
@@ -141,6 +142,12 @@ export interface RigaCatalogo {
   cedolaListino?: number | null;
   /** Solo `stepUp`, a piano risolto. */
   gradiniCedola?: GradinoCedola[];
+  /**
+   * Il listino non dà la cedola né nel nome né in colonna: `cedolaAnnua` è
+   * zero e va letta dalla scheda del titolo (lib/mercato/cedola-scheda.ts).
+   * Serve solo fra listino e scaricamento e non va in catalogo.
+   */
+  cedolaDaScheda?: true;
 }
 
 export interface EsitoParse {
@@ -358,9 +365,29 @@ export function parseListaBtp(
     const cedolaAnnua = senzaCedola
       ? 0
       : ((dalNome ? numeroFlessibile(dalNome) : null) ??
-        (celle[3] ? (numeroFlessibile(celle[3]) ?? 0) * perAnno : null));
-    if (cedolaAnnua == null || cedolaAnnua > 20) {
-      scartate.push({ isin, motivo: `cedola non riconosciuta (${dalNome ?? celle[3]})` });
+        (celle[3] ? (numeroFlessibile(celle[3]) ?? NaN) * perAnno : null));
+    // Né nel nome né in colonna (OAT€i «Oatei Fx Jul43 Eur»): non si scarta
+    // subito, la cedola annua si legge dalla scheda del titolo. Una colonna
+    // che c'è ma non si legge, o oltre il limite, scarta come prima.
+    if (!senzaCedola && !dalNome && (celle[3] ?? "").trim() === "") {
+      righe.push({
+        isin,
+        nome,
+        cedolaAnnua: 0,
+        dataScadenza: `${scadenzaIT[3]}-${scadenzaIT[2]}-${scadenzaIT[1]}`,
+        prezzo,
+        tipo,
+        emittente,
+        frequenzaCedola: frequenzaCedola(emittente),
+        cedolaDaScheda: true,
+      });
+      continue;
+    }
+    if (cedolaAnnua == null || Number.isNaN(cedolaAnnua) || cedolaAnnua > 20) {
+      scartate.push({
+        isin,
+        motivo: `cedola non riconosciuta (${dalNome ?? celle[3] ?? "assente"}) (${nome})`,
+      });
       continue;
     }
 
@@ -552,6 +579,29 @@ export async function schedaStepUpMot(isin: string): Promise<SchedaStepUp> {
     throw new Error("la scheda ricevuta non è quella dell'ISIN richiesto");
   }
   return parseSchedaStepUp(html);
+}
+
+/**
+ * La cedola annua della scheda, campo «Tasso Cedola su base Annua» («0,95»).
+ * L'etichetta «Tasso Cedola Periodale» sta nella riga sopra e può essere
+ * vuota: `valoreEtichettato` guarda solo la cella della sua riga.
+ */
+export function parseCedolaAnnuaScheda(html: string): LetturaCedola {
+  const testo = valoreEtichettato(html, "Tasso Cedola su base Annua");
+  return { testo, valore: testo == null ? null : numeroFlessibile(testo) };
+}
+
+/** Legge la scheda del titolo e ne estrae la cedola annua; errore di rete o scheda sbagliata: eccezione. */
+export async function cedolaAnnuaSchedaMot(isin: string): Promise<LetturaCedola> {
+  const risposta = await chiedi(urlScheda(isin), { redirect: "manual" });
+  if (risposta.status !== 200) {
+    throw new Error(`Borsa Italiana ha risposto ${risposta.status}`);
+  }
+  const html = await risposta.text();
+  if (!html.includes(isin)) {
+    throw new Error("la scheda ricevuta non è quella dell'ISIN richiesto");
+  }
+  return parseCedolaAnnuaScheda(html);
 }
 
 export async function dataGodimentoMot(isin: string): Promise<string> {

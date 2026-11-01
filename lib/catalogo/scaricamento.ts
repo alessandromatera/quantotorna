@@ -1,5 +1,6 @@
 import { TIPI_CATALOGO, type TipoCatalogo } from "../categorie";
 import { aggiungiGiorni } from "../date";
+import { risolviCedoleDaScheda, type LetturaCedola } from "../mercato/cedola-scheda";
 import { risolviCedoleUniche, type CedolaUnica } from "../mercato/cedola-unica";
 import {
   FONTE_BORSA_ITALIANA,
@@ -58,6 +59,8 @@ export interface Fonti {
   leggiDocumentiMef: (documenti: DocumentoMef[]) => Promise<EsitoDocumentoMef[]>;
   /** La scheda di Borsa Italiana di un titolo: per gli step-up e per la cedola unica. */
   schedaStepUp: (isin: string) => Promise<SchedaStepUp>;
+  /** Il campo «Tasso Cedola su base Annua» della scheda, per i titoli il cui listino non dà la cedola. */
+  cedolaAnnuaScheda: (isin: string) => Promise<LetturaCedola>;
   emissioneOnvista: (isin: string) => Promise<EmissioneOnvista>;
   dataGodimento: (isin: string) => Promise<string>;
   scambi: (
@@ -176,10 +179,11 @@ export async function aggiornaCatalogo(
     throw new Error("listini del MOT vuoti: la pagina è cambiata, catalogo invariato");
   }
 
-  const stepUp = await conPianiStepUp(listini.value.righe, precedente, fonti, oggi);
+  const conCedola = await conCedoleDaScheda(listini.value.righe, precedente, fonti);
+  const stepUp = await conPianiStepUp(conCedola.righe, precedente, fonti, oggi);
   const cedoleUniche = await conCedoleUniche(stepUp.titoli, precedente, fonti);
   const titoli = cedoleUniche.titoli;
-  const scartate = [...listini.value.scartate, ...stepUp.scartate, ...cedoleUniche.scartate];
+  const scartate = [...listini.value.scartate, ...conCedola.scartate, ...stepUp.scartate, ...cedoleUniche.scartate];
 
   let euribor6m: Catalogo["euribor6m"] = precedente?.euribor6m ?? null;
   if (euribor.status === "fulfilled") {
@@ -257,6 +261,34 @@ export async function aggiornaCatalogo(
       ...e.rapporto,
       scambi: rapportoScambi,
     },
+  };
+}
+
+/**
+ * La cedola annua dalla scheda sulle righe che il listino lascia senza
+ * (lib/mercato/cedola-scheda.ts); chi resta senza è scartato col motivo.
+ * La memoria di ieri sono i titoli di ieri: nessun campo nuovo nel catalogo.
+ */
+async function conCedoleDaScheda(
+  righe: EsitoParse["righe"],
+  precedente: Catalogo | null,
+  fonti: Fonti,
+): Promise<{ righe: EsitoParse["righe"]; scartate: { isin: string; motivo: string }[] }> {
+  const precedenti = new Map<string, number>();
+  for (const t of precedente?.titoli ?? []) precedenti.set(t.isin, t.cedolaAnnua);
+  const { cedole, scartate } = await risolviCedoleDaScheda(
+    righe.filter((r) => r.cedolaDaScheda),
+    { precedenti, leggiCedola: fonti.cedolaAnnuaScheda },
+  );
+  return {
+    righe: righe.flatMap((r) => {
+      if (!r.cedolaDaScheda) return [r];
+      const cedola = cedole.get(r.isin);
+      if (cedola == null) return [];
+      const { cedolaDaScheda: _, ...resto } = r;
+      return [{ ...resto, cedolaAnnua: cedola }];
+    }),
+    scartate,
   };
 }
 

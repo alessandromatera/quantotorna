@@ -8,7 +8,9 @@ import {
   frequenzaCedola,
   isSovranazionale,
   isValutaEstera,
+  NON_TRATTATI,
   motivoNonRiconosciuto,
+  motivoEsclusioneVoluta,
   riconosciEmittente,
 } from "./emittenti";
 
@@ -313,5 +315,21 @@ describe("rating", () => {
     // Romania: è l'ordine che il catalogo mostra riga per riga.
     expect(distanzaRating("FR", "IT")).toBeGreaterThan(0);
     expect(distanzaRating("IT", "GR")).toBeGreaterThan(0);
+  });
+});
+
+describe("motivoEsclusioneVoluta", () => {
+  it("riconosce i motivi costruiti da NON_TRATTATI, qualunque sia il nome", () => {
+    for (const testo of Object.values(NON_TRATTATI)) {
+      expect(motivoEsclusioneVoluta(`Nome Inventato Fx 1% Dc29 Eur: ${testo}`)).toBe(true);
+    }
+    expect(motivoEsclusioneVoluta(motivoNonRiconosciuto("Kfw Fx 2.875% Dec29 Eur", "DE000A30VM78"))).toBe(true);
+  });
+
+  it("non riconosce gli altri motivi di scarto", () => {
+    expect(motivoEsclusioneVoluta("prezzo assente (non scambiato)")).toBe(false);
+    expect(motivoEsclusioneVoluta("cedola non riconosciuta («x»)")).toBe(false);
+    expect(motivoEsclusioneVoluta("Kfw Perp: senza data di scadenza")).toBe(false);
+    expect(motivoEsclusioneVoluta(motivoNonRiconosciuto("Inventata Spa Fx 1% Dc29 Eur", "XS0000000019"))).toBe(false);
   });
 });

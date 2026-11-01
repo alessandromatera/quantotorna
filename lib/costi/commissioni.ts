@@ -43,11 +43,12 @@ export function commissione(params: {
 }): Centesimi {
   const { tariffa, controvalore } = params;
   const lordo = arrotondaCentesimi((Math.abs(controvalore) * tariffa.percentuale) / 100);
-  let proporzionale = lordo;
-  if (tariffa.percentuale > 0) {
-    proporzionale = Math.max(tariffa.minimo, lordo);
-    if (tariffa.massimo > 0) proporzionale = Math.min(tariffa.massimo, proporzionale);
-  }
+  // Minimo e massimo valgono anche con percentuale zero: una tariffa con
+  // solo il minimo fa pagare il minimo. Se il massimo è sotto il minimo
+  // (tariffa incoerente) vince il massimo, perché è applicato per ultimo: è
+  // il tetto di quanto si può pagare. Con la tariffa nulla tutto resta zero.
+  let proporzionale = Math.max(tariffa.minimo, lordo);
+  if (tariffa.massimo > 0) proporzionale = Math.min(tariffa.massimo, proporzionale);
   return proporzionale + tariffa.fisso;
 }
 

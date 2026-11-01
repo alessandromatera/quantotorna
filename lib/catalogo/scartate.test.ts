@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { NON_TRATTATI } from "../mercato/emittenti";
 import { motivoSuUnaRiga, raggruppaScartate, riepilogoScartateNuove, scartateNuove } from "./scartate";
 
 describe("raggruppaScartate", () => {
@@ -43,6 +44,39 @@ describe("scartateNuove", () => {
   it("un titolo già scartato che cambia motivo è una novità", () => {
     const oggi = [{ isin: "IT0000000045", motivo: "cedola unica non riconosciuta («testo di oggi»)" }];
     expect(scartateNuove(ieri, oggi)).toEqual(oggi);
+  });
+
+  describe("le esclusioni volute non sono novità", () => {
+    const voluto = (chiave: string, nome: string) => `${nome}: ${NON_TRATTATI[chiave]}`;
+
+    it("un KfW che ieri era senza prezzo e oggi ha scambiato non è nuovo", () => {
+      const prima = [{ isin: "DE0000000012", motivo: "prezzo assente (non scambiato)" }];
+      const oggi = [{ isin: "DE0000000012", motivo: voluto("kfw", "Kfw Fx 2.875% Dec29 Eur") }];
+      expect(scartateNuove(prima, oggi)).toEqual([]);
+    });
+
+    it("lo stesso per un EFSF e per un'eurobbligazione Italy", () => {
+      const prima = [
+        { isin: "EU0000000010", motivo: "prezzo assente (non scambiato)" },
+        { isin: "XS0000000068", motivo: "prezzo assente (non scambiato)" },
+      ];
+      const oggi = [
+        { isin: "EU0000000010", motivo: voluto("efsf", "Efsf Fx 1% Gen30 Eur") },
+        { isin: "XS0000000068", motivo: voluto("italy", "Italy Fx 5% Gen35 Eur") },
+      ];
+      expect(scartateNuove(prima, oggi)).toEqual([]);
+    });
+
+    it("un titolo nuovo con «cedola non riconosciuta» resta una novità", () => {
+      const oggi = [{ isin: "IT0000000078", motivo: "cedola non riconosciuta («testo inventato»)" }];
+      expect(scartateNuove(ieri, oggi)).toEqual(oggi);
+    });
+
+    it("un titolo che ieri era KfW e oggi ha un motivo non voluto resta una novità", () => {
+      const prima = [{ isin: "DE0000000012", motivo: voluto("kfw", "Kfw Fx 2.875% Dec29 Eur") }];
+      const oggi = [{ isin: "DE0000000012", motivo: "senza data di scadenza (Kfw Perp)" }];
+      expect(scartateNuove(prima, oggi)).toEqual(oggi);
+    });
   });
 
   it("niente di nuovo, niente da segnalare", () => {

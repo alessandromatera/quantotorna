@@ -11,6 +11,8 @@
  * se quel testo cambia, la riga finisce fra quelle elencate, non sparisce.
  */
 
+import { motivoEsclusioneVoluta } from "../mercato/emittenti";
+
 export interface GruppoScartate {
   etichetta: string;
   quante: number;
@@ -49,13 +51,21 @@ export function raggruppaScartate(scartate: { isin: string; motivo: string }[]):
  * il BTP Valore Insieme è sparito così, e nessuno l'ha visto fino al giorno
  * dopo: il giro le segnala all'autore (.github/workflows/sito.yml). Conta la
  * coppia ISIN e motivo, quindi anche un titolo già fuori che cambia motivo.
+ *
+ * Non contano le esclusioni decise apposta (KfW, Rentenbank, CDP, EFSF,
+ * eurobbligazioni Italy: NON_TRATTATI in lib/mercato/emittenti.ts): un KfW
+ * che ieri non era scambiato e oggi sì passa da «prezzo assente» al suo
+ * motivo, ma non c'è niente da guardare (falso allarme del 30/10/2026). I
+ * perpetui e tutti gli altri motivi restano segnalati.
  */
 export function scartateNuove(
   ieri: { isin: string; motivo: string }[],
   oggi: { isin: string; motivo: string }[],
 ): { isin: string; motivo: string }[] {
   const viste = new Set(ieri.map((s) => `${s.isin} ${s.motivo}`));
-  return raggruppaScartate(oggi).altre.filter((s) => !viste.has(`${s.isin} ${s.motivo}`));
+  return raggruppaScartate(oggi).altre.filter(
+    (s) => !motivoEsclusioneVoluta(s.motivo) && !viste.has(`${s.isin} ${s.motivo}`),
+  );
 }
 
 /**

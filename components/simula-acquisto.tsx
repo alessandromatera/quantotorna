@@ -123,13 +123,17 @@ export function SimulaAcquisto({
   );
 }
 
-/** Il conto del regolamento, riga per riga: quello che si vedrebbe sull'estratto. */
+/**
+ * Il conto del regolamento, riga per riga: quello che si vedrebbe sull'estratto.
+ * Segni dal lato di chi compra: «−» è una spesa (esce dal conto, anche nei
+ * totali), «+» un'imposta rimborsata che riduce la spesa.
+ */
 function Conto({ s }: { s: Simulazione }) {
   const righe: RigaConto[] = [
     {
       voce: `Controvalore (${formatNumero(s.nominale)} a ${formatPrezzoMot(s.prezzo)})`,
       importo: s.controvalore,
-      segno: "",
+      segno: "−",
     },
     {
       voce: (
@@ -139,22 +143,22 @@ function Conto({ s }: { s: Simulazione }) {
         </>
       ),
       importo: s.rateo,
-      segno: "+",
+      segno: "−",
     },
-    { voce: "Commissioni (le tue condizioni)", importo: s.commissioni, segno: "+" },
-    { voce: "Addebito sul conto", importo: s.addebito, segno: "", forte: true },
+    { voce: "Commissioni (le tue condizioni)", importo: s.commissioni, segno: "−" },
+    { voce: "Addebito sul conto", importo: s.addebito, segno: "−", forte: true },
   ];
   if (s.stornoRateo > 0) {
-    righe.push({ voce: "Imposta sul rateo, rimborsata", importo: s.stornoRateo, segno: "−" });
+    righe.push({ voce: "Imposta sul rateo, rimborsata", importo: s.stornoRateo, segno: "+" });
   }
   if (s.creditoDisaggio > 0) {
-    righe.push({ voce: "Credito sul disaggio già maturato", importo: s.creditoDisaggio, segno: "−" });
+    righe.push({ voce: "Credito sul disaggio già maturato", importo: s.creditoDisaggio, segno: "+" });
   }
   if (s.impostaScarto > 0) {
-    righe.push({ voce: "Imposta sullo scarto residuo (BOT)", importo: s.impostaScarto, segno: "+" });
+    righe.push({ voce: "Imposta sullo scarto residuo (BOT)", importo: s.impostaScarto, segno: "−" });
   }
   if (s.costoNetto !== s.addebito) {
-    righe.push({ voce: "Costo netto", importo: s.costoNetto, segno: "", forte: true });
+    righe.push({ voce: "Costo netto", importo: s.costoNetto, segno: "−", forte: true });
   }
   return <TabellaConto righe={righe} />;
 }

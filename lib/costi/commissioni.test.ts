@@ -32,6 +32,22 @@ describe("commissione", () => {
     expect(commissione({ tariffa: TARIFFA_NULLA, controvalore: 1_000_000 })).toBe(0);
   });
 
+  it("solo il minimo, senza percentuale: si paga il minimo", () => {
+    const soloMinimo = { percentuale: 0, minimo: 295, massimo: 0, fisso: 0 };
+    expect(commissione({ tariffa: soloMinimo, controvalore: 100_000 })).toBe(295);
+    expect(commissione({ tariffa: soloMinimo, controvalore: 5_000_000 })).toBe(295);
+  });
+
+  it("solo minimo più fisso: minimo più fisso", () => {
+    const minimoEFisso = { percentuale: 0, minimo: 295, massimo: 0, fisso: 100 };
+    expect(commissione({ tariffa: minimoEFisso, controvalore: 500_000 })).toBe(395);
+  });
+
+  it("massimo sotto il minimo: vince il massimo", () => {
+    const incoerente = { percentuale: 0, minimo: 500, massimo: 300, fisso: 0 };
+    expect(commissione({ tariffa: incoerente, controvalore: 100_000 })).toBe(300);
+  });
+
   it("il segno del controvalore non conta", () => {
     expect(commissione({ tariffa: proporzionale, controvalore: -500_000 })).toBe(750);
   });

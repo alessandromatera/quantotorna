@@ -67,6 +67,26 @@ describe("simulaAcquisto", () => {
     expect(con.ytmLordoPct).toBe(senza.ytmLordoPct);
   });
 
+  it("una tariffa di solo minimo, senza percentuale, entra nei conti", () => {
+    const soloMinimo = { percentuale: 0, minimo: 295, massimo: 0, fisso: 0 };
+    const bond = parametriTitolo(btp, OGGI);
+    const senza = simulaAcquisto(bond, TARIFFA_NULLA)!;
+    const con = simulaAcquisto(bond, soloMinimo)!;
+    expect(con.commissioni).toBe(295);
+    // Il costo netto cresce del minimo, per intero.
+    expect(con.costoNetto - senza.costoNetto).toBe(295);
+    // Il minimo entra nel costo fiscale: la plusvalenza cala di 2,95 € e
+    // l'imposta del 12,5% di 36,875 centesimi, cioè 37 (o 36) centesimi.
+    expect(con.rimborso.plusvalenza).toBe(senza.rimborso.plusvalenza - 295);
+    const risparmio = senza.rimborso.impostaPlusvalenza - con.rimborso.impostaPlusvalenza;
+    expect(risparmio).toBeGreaterThanOrEqual(36);
+    expect(risparmio).toBeLessThanOrEqual(37);
+    // Il guadagno netto cala del minimo meno l'imposta risparmiata: 258 o 259
+    // centesimi, non 295.
+    expect(senza.rendimento!.guadagnoNetto - con.rendimento!.guadagnoNetto).toBe(295 - risparmio);
+    expect(con.rendimento!.guadagnoNetto).toBeLessThan(senza.rendimento!.guadagnoNetto);
+  });
+
   it("tenuto fino al rimborso dà lo stesso conto di «Se esco prima» a scadenza", () => {
     const tariffa = { percentuale: 0.19, minimo: 295, massimo: 1_900, fisso: 0 };
     const bond = parametriTitolo(btp, OGGI);

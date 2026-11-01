@@ -31,6 +31,9 @@ function fonti(campi: Partial<Fonti> = {}): Fonti {
     schedaStepUp: async () => {
       throw new Error("scheda non prevista in questo test");
     },
+    cedolaAnnuaScheda: async () => {
+      throw new Error("scheda non prevista in questo test");
+    },
     emissioneOnvista: async () => {
       throw new Error("prezzo di emissione non pubblicato");
     },
@@ -42,6 +45,23 @@ function fonti(campi: Partial<Fonti> = {}): Fonti {
       falliti: [],
     }),
     ...campi,
+  };
+}
+
+/** Un titolo di catalogo da una riga di listino. */
+function catalogoDi(r: RigaCatalogo) {
+  return {
+    isin: r.isin,
+    nome: r.nome,
+    tipo: r.tipo,
+    emittente: r.emittente,
+    cedolaAnnua: r.cedolaAnnua,
+    frequenzaCedola: r.frequenzaCedola,
+    dataScadenza: r.dataScadenza,
+    prezzo: r.prezzo,
+    spread: null,
+    gradiniCedola: null,
+    scambi: null,
   };
 }
 
@@ -392,6 +412,44 @@ describe("aggiornaCatalogo", () => {
       const { catalogo, rapporto } = await aggiornaCatalogo(null, fonti({ listini }), opzioni);
       expect(catalogo.titoli).toEqual([]);
       expect(rapporto.scartate[0]).toMatchObject({ isin: "IT0000000078" });
+    });
+  });
+
+  describe("cedola dalla scheda quando il listino non la dà", () => {
+    const oatei = riga("FR0000000011", {
+      nome: "Oatei Fx Inventato Eur",
+      tipo: "indicizzatoEuro",
+      emittente: "FR",
+      cedolaAnnua: 0,
+      frequenzaCedola: 1,
+      dataScadenza: "2043-07-25",
+      cedolaDaScheda: true,
+    });
+    const listini = async () => ({ righe: [oatei], scartate: [], pagine: 1 });
+
+    it("la cedola annua della scheda entra in catalogo, senza il segnaposto", async () => {
+      const { catalogo } = await aggiornaCatalogo(
+        null,
+        fonti({ listini, cedolaAnnuaScheda: async () => ({ testo: "0,95", valore: 0.95 }) }),
+        opzioni,
+      );
+      expect(catalogo.titoli[0]).toMatchObject({ isin: "FR0000000011", cedolaAnnua: 0.95, tipo: "indicizzatoEuro" });
+      expect(JSON.stringify(catalogo)).not.toMatch(/cedolaDaScheda/);
+    });
+
+    it("scheda non letta: la cedola di ieri; senza ieri, scartato col nome", async () => {
+      const nonRisponde = async () => {
+        throw new Error("Borsa Italiana ha risposto 503");
+      };
+      const diIeri = await aggiornaCatalogo(
+        ieri({ titoli: [{ ...catalogoDi(oatei), cedolaAnnua: 0.95 }] }),
+        fonti({ listini, cedolaAnnuaScheda: nonRisponde }),
+        opzioni,
+      );
+      expect(diIeri.catalogo.titoli[0].cedolaAnnua).toBe(0.95);
+      const senza = await aggiornaCatalogo(null, fonti({ listini, cedolaAnnuaScheda: nonRisponde }), opzioni);
+      expect(senza.catalogo.titoli).toEqual([]);
+      expect(senza.catalogo.rapporto.scartate[0].motivo).toMatch(/Oatei Fx Inventato Eur/);
     });
   });
 });

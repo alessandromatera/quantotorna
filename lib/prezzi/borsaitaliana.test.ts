@@ -3,6 +3,7 @@ import {
   PAGINE_IN_PARALLELO,
   parseDataGodimento,
   parseListaBtp,
+  parseCedolaAnnuaScheda,
   parseSchedaStepUp,
   scaricaListaBtp,
 } from "./borsaitaliana";
@@ -398,14 +399,44 @@ describe("parseListaBtp sul listino estero", () => {
       "DE0001102614",
       "DE0001135085",
       "ES00000128P6",
+      "FR001400QCA1",
     ]);
   });
 
   /** Rilevato il 20/10/2026: quindici titoli scartati per una cedola che c'era. */
   it("legge la cedola in fondo al nome, senza il «%», quando la colonna è vuota", () => {
     expect(per("DE0001135085")).toMatchObject({ cedolaAnnua: 4.75, emittente: "DE", tipo: "fisso" });
-    // Senza numero da nessuna parte resta scartato: meglio fuori che inventato.
-    expect(scarto("FR001400QCA1")!.motivo).toMatch(/cedola non riconosciuta/);
+  });
+
+  /**
+   * «Oatei Fx Jul43 Eur» non porta la cedola né nel nome né nella colonna:
+   * non si scarta subito, la cedola si legge sulla scheda del titolo.
+   */
+  it("senza cedola né nel nome né in colonna passa alla lettura della scheda", () => {
+    expect(scarto("FR001400QCA1")).toBeUndefined();
+    expect(per("FR001400QCA1")).toMatchObject({
+      nome: "Oatei Fx Jul43 Eur",
+      tipo: "indicizzatoEuro",
+      emittente: "FR",
+      frequenzaCedola: 1,
+      cedolaAnnua: 0,
+      cedolaDaScheda: true,
+    });
+    expect(per("DE0001135085")!.cedolaDaScheda).toBeUndefined();
+  });
+
+  it("una colonna che non si legge è scartata, e il motivo porta il nome", () => {
+    const html = `<table><tr>
+  <td><a href="/borsa/obbligazioni/mot/euro-obbligazioni/scheda/DE0000000011-MOTX.html?lang=it"><strong>DE0000000011 - </strong></a></td>
+  <td><span>Bund Lg30 Eur</span></td>
+  <td>101,00</td>
+  <td>abc</td>
+  <td>04/07/2030</td>
+  <td></td>
+</tr></table>`;
+    const e = parseListaBtp(html, "daNome", true);
+    expect(e.righe).toEqual([]);
+    expect(e.scartate[0].motivo).toBe("cedola non riconosciuta (abc) (Bund Lg30 Eur)");
   });
 
   it("un perpetuo si scarta dicendo che non ha scadenza", () => {
@@ -623,6 +654,46 @@ describe("parseDataGodimento", () => {
     const html = `<tr><td><strong>Data Godimento</strong></td><td><span class="t-text -right">01/11/21</span></td></tr>`;
     expect(parseDataGodimento(html)).toBe("2021-11-01");
     expect(parseDataGodimento("<p>niente</p>")).toBeNull();
+  });
+});
+
+describe("parseCedolaAnnuaScheda", () => {
+  /** Frammento vero della scheda di FR001400QCA1 (1/11/2026): la periodale è vuota, l'annua no. */
+  const FRAMMENTO = `
+						<tr>
+							<td>
+								<span class="t-text">
+									<strong>Tasso Cedola Periodale</strong>
+								</span>
+							</td>
+							<td>
+								<span class="t-text -right">
+								</span>
+							</td>
+						</tr>
+						<tr>
+							<td>
+								<span class="t-text">
+									<strong>Tasso Cedola su base Annua</strong>
+								</span>
+							</td>
+							<td>
+								<span class="t-text -right">
+0,95								</span>
+							</td>
+						</tr>`;
+
+  it("legge la cedola annua", () => {
+    expect(parseCedolaAnnuaScheda(FRAMMENTO)).toEqual({ testo: "0,95", valore: 0.95 });
+  });
+
+  it("campo vuoto o assente: nessun valore, e non la cella accanto", () => {
+    expect(parseCedolaAnnuaScheda(FRAMMENTO.replace("0,95", ""))).toEqual({ testo: null, valore: null });
+    expect(parseCedolaAnnuaScheda("<p>niente</p>")).toEqual({ testo: null, valore: null });
+  });
+
+  it("un testo che non è un numero resta testo, senza valore", () => {
+    expect(parseCedolaAnnuaScheda(FRAMMENTO.replace("0,95", "n.d."))).toEqual({ testo: "n.d.", valore: null });
   });
 });
 
